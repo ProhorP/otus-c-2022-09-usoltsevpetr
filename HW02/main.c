@@ -98,7 +98,8 @@ main(int argc, char *argv[])
 				"cp1251, koi8-r, iso-8859-5");
                 return 1;
 	}
-
+/*
+ * закомментировал по рекомендации прошлого ДЗ(достаточно функции OPEN)
 	if (access(argv[1], R_OK) < 0){
 		printf("Файл %s недоступен для чтения\n", argv[1]);
 		return 1;
@@ -109,7 +110,7 @@ main(int argc, char *argv[])
 		printf("Файл %s недоступен для записи\n", argv[3]);
 		return 1;
 	}
-
+*/
 	if ((fd_input = open(argv[1], O_RDONLY)) < 0){
 		printf("Ошибка вызова open(чтение) для файла %s\n", argv[1]);
 		return 1;
@@ -119,7 +120,8 @@ main(int argc, char *argv[])
 		printf("Ошибка вызова open(запись) для файла %s\n", argv[3]);
 		return 1;
 	}
-
+/*
+* убрал проверку по рекомендации, но оставил как комментарий на всякий случай
 	if (fstat(fd_input, &statbuf) < 0){
                 printf("Ошибка вызова функции fstat для файла %s\n", argv[1]);
                 return 1;
@@ -141,7 +143,7 @@ main(int argc, char *argv[])
 		printf("Выбран необычный файл %s\n", argv[3]);
 		return 1;
 	}
-
+*/
 
 	while ((n = read(fd_input, buf_file, BUFFSIZE)) > 0){
 		i = 0;
@@ -185,7 +187,8 @@ main(int argc, char *argv[])
 		return 1;
 	}
 
-
+	/*я знаю что методы при закрытии программы отрабатывают автоматически
+	 * но для демонстрации делаю явное закрытие*/
 	if (close(fd_input) < 0){
 		printf("Ошибка вызова close(чтение) для файла %s\n", argv[1]);
 		return 1;
