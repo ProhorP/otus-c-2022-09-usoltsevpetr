@@ -84,7 +84,7 @@ main(int argc, char *argv[])
 		printf("Неверно введена команда\n"
 			"Нужно ввести в таком формате:\n"
 			 "\"./convert input_file charset output_file\"\n");
-		exit(1);
+		return 1;
 	}
 
 	if (strcmp(argv[2], "cp1251") == 0)
@@ -96,50 +96,50 @@ main(int argc, char *argv[])
 	else {
 		printf("%s\n", "Кодировка должны быть в одном из следующих форматов:\n"
 				"cp1251, koi8-r, iso-8859-5");
-                exit(1);
+                return 1;
 	}
 
 	if (access(argv[1], R_OK) < 0){
 		printf("Файл %s недоступен для чтения\n", argv[1]);
-		exit(1);
+		return 1;
 	}
 
 	if ((access(argv[3], F_OK) == 0) && (access(argv[3], W_OK) < 0)){
 
 		printf("Файл %s недоступен для записи\n", argv[3]);
-		exit(1);
+		return 1;
 	}
 
 	if ((fd_input = open(argv[1], O_RDONLY)) < 0){
 		printf("Ошибка вызова open(чтение) для файла %s\n", argv[1]);
-		exit(1);
+		return 1;
 	}
 
 	if ((fd_output = open(argv[3], O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR)) < 0){
 		printf("Ошибка вызова open(запись) для файла %s\n", argv[3]);
-		exit(1);
+		return 1;
 	}
 
 	if (fstat(fd_input, &statbuf) < 0){
                 printf("Ошибка вызова функции fstat для файла %s\n", argv[1]);
-                exit(1);
+                return 1;
 
 	}
 
 	if (!S_ISREG(statbuf.st_mode)){
 		printf("Выбран необычный файл %s\n", argv[1]);
-		exit(1);
+		return 1;
 	}
 
 	if (fstat(fd_output, &statbuf) < 0){
                 printf("Ошибка вызова функции fstat для файла %s\n", argv[3]);
-                exit(1);
+                return 1;
 
 	}
 
 	if (!S_ISREG(statbuf.st_mode)){
 		printf("Выбран необычный файл %s\n", argv[3]);
-		exit(1);
+		return 1;
 	}
 
 
@@ -182,20 +182,20 @@ main(int argc, char *argv[])
 
 	if (n < 0){
 		printf("Ошибка чтения\n");
-		exit(1);
+		return 1;
 	}
 
 
 	if (close(fd_input) < 0){
 		printf("Ошибка вызова close(чтение) для файла %s\n", argv[1]);
-		exit(1);
+		return 1;
 	}
 
 	if (close(fd_output) < 0){
 		printf("Ошибка вызова close(запись) для файла %s\n", argv[3]);
-		exit(1);
+		return 1;
 	}
 
-	exit(0);
+	return 0;
 
 }
