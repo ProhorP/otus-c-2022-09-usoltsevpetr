@@ -11,7 +11,9 @@
 
 unsigned char	buf_file[BUFFSIZE];
 
+/*
 struct stat statbuf;
+*/
 
 struct utf_8_struct {
 	char32_t value;
