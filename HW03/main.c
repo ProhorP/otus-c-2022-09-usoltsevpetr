@@ -21,6 +21,7 @@ int	size_hash_table = 10;
 unsigned long long	hashcode(unsigned char *str);
 entry*			new_entry(char *user_string);
 void			init_hash_table();
+void			error_exit(char *str);
 
 int
 main(int argc, char *argv[])
@@ -79,6 +80,10 @@ entry*
 new_entry(char *str) {
 
 	entry *e = (entry*)malloc(sizeof(entry) + strlen(str) + 1);
+
+	if (e == NULL)
+		error_exit("Не удалось выделить память под элемент таблицы");
+
 	e->key = (char *) e + sizeof(entry);
 	e->value = 1;
       	strcpy(e->key, str);	
@@ -103,6 +108,11 @@ void
 init_hash_table() {
 
 	hash_table = (entry**) calloc(sizeof(entry*), size_hash_table);
+	
+	if (hash_table == NULL)
+		error_exit("Не удалось выделить память под таблицу");
+
+
 
 }
 
@@ -121,6 +131,7 @@ insert_hash_table(char *str) {
 			if (strcmp(hash_table[index]->key, str) == 0){
                     		hash_table[index]->value++;
 				success = true;
+				break;
 			}
 		} else {
 	
@@ -138,38 +149,69 @@ insert_hash_table(char *str) {
 		}
 	}
 
-	if (!success){
+	if (!success)
 		rebase_hash_table(str);
-	}
-
 }
+
 
 void
 rebase_hash_table(char *str){
 
+	/*увеличим размер hash-таблицы в 2 раза*/
 	int new_size_hash_table = size_hash_table << 1;
 
 	entry ** new_hash_table = (entry**) calloc(sizeof(entry*), new_size_hash_table);
+		
+	if (new_hash_table == NULL)
+		error_exit("Не удалось выделить память под таблицу");
 
 	int	i=0;
 
 	while (i < size_hash_table){
 	
-	       int index = (int) (hashcode((unsigned char*)str) % new_size_hash_table);
+		int index = (int) (hashcode((unsigned char*)hash_table[i]->key) % new_size_hash_table);
+		int red_line = new_size_hash_table;
+		int j = index;
 
+		while (j < red_line){
+		
+			if (!new_hash_table[j]){
+				new_hash_table[j] = hash_table[i];
+				break;
+			}
+	
+			/*уходим на поиск с начала таблицы
+        	        до вычисленного по hash-функции индекса
+               		 */
+                	if (++j == new_size_hash_table){
+                	        j = 0;
+                        	red_line = index;
+                	}
 
-		if (!hash_table[i])
-			new_hash_table[i]
-
+		}
+			
 		i++;
 	}
 
-	/*увеличим размер hash-таблицы в 2 раза*/
+	/*запоминаем новый размер таблицы*/
 	size_hash_table = new_size_hash_table;
 
+	/*очищаем старую таблицу указателей*/
 	free(hash_table);
+
+	/*переназначаем таблицу*/
 	hash_table = new_hash_table;
 
+	/*делаем повторную вставку элемента.
+	 * Сейчас таблица увеличилась и операция вставки будет успешной*/
 	insert_hash_table(str);
+
+}
+
+void
+error_exit(char *str){
+
+	printf("%s\n", str);
+	exit(1);
 
 }
