@@ -165,13 +165,13 @@ rebase_hash_table(char *str){
 	if (new_hash_table == NULL)
 		error_exit("Не удалось выделить память под таблицу");
 
-	int	i=0;
+	int	i=0, j=0, index=0, red_line=0;
 
 	while (i < size_hash_table){
 	
-		int index = (int) (hashcode((unsigned char*)hash_table[i]->key) % new_size_hash_table);
-		int red_line = new_size_hash_table;
-		int j = index;
+		index = (int) (hashcode((unsigned char*)hash_table[i]->key) % new_size_hash_table);
+		red_line = new_size_hash_table;
+		j = index;
 
 		while (j < red_line){
 		
