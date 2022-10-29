@@ -17,7 +17,7 @@ typedef struct entry {
 entry	**hash_table;
 int	size_hash_table = 10;
 
-unsigned long long	hashcode(unsigned char *str);
+int			hashindex(char *str);
 entry*			new_entry(char *user_string);
 void			init_hash_table();
 void			error_exit(char *str);
@@ -129,18 +129,18 @@ new_entry(char *str) {
 }
 
 /*функцию взял из интернета*/
-unsigned long long
-hashcode(unsigned char *str) {
+int
+hashindex(char *str) {
     unsigned long long hash = 5381;
     int c;
  
     if (size_hash_table == 1)
 	    error_exit("Размер таблицы должен быть более 1/n");
 
-    while ((c = *str++)) {
+    while ((c = (unsigned char)*str++)) {
         hash = ((hash << 5) + hash) ^ c;
     }
-    return hash;
+    return hash % size_hash_table;
 }
 
 void
@@ -159,7 +159,7 @@ insert_hash_table(char *str) {
 	if (!strlen(str))
 		return;
 
-	int index = (int) (hashcode((unsigned char*)str) % size_hash_table);
+	int index = hashindex(str);
 
 	int 	i = index;
 	bool 	success = false;
@@ -209,7 +209,7 @@ rebase_hash_table(char *str){
 
 	while (i < size_hash_table){
 	
-		index = (int) (hashcode((unsigned char*)hash_table[i]->key) % new_size_hash_table);
+		index = hashindex(hash_table[i]->key);
 		red_line = new_size_hash_table;
 		j = index;
 
