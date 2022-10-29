@@ -5,14 +5,13 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
-//#include <errno.h>
-//#include <uchar.h>
 
 #define BUFFSIZE 4096
+#define SIZE_WORD 1024
 
 typedef struct entry {
-	char	*key;
-	int	value;
+	char		*key;
+	unsigned int	value;
 } entry;
 
 entry	**hash_table;
@@ -22,6 +21,10 @@ unsigned long long	hashcode(unsigned char *str);
 entry*			new_entry(char *user_string);
 void			init_hash_table();
 void			error_exit(char *str);
+void			rebase_hash_table(char *str);
+void			destroy_hash_table();
+void			insert_hash_table(char *str);
+void			print_hash_table();
 
 int
 main(int argc, char *argv[])
@@ -41,17 +44,40 @@ main(int argc, char *argv[])
 		return 1;
 	}
 
-	int	i,n;
+	int		i,j=0,n;
 	unsigned char	buf_file[BUFFSIZE];
+	char		buf_word[SIZE_WORD];
+
+	init_hash_table();
 
 	while ((n = read(fd, buf_file, BUFFSIZE)) > 0){
 		i = 0;
 		while (i < n){
-		i++;
+
+			if (buf_file[i] == ' '){
+				
+				/*слова считаем по пробелам
+				 * могут быть знаки препинания, но не зная кодировки файла
+				 * нельзя трактовать смысл символов, поэтому 
+				 * делаю максимавльно простой вариант*/
+				buf_word[j] = '\0';//конец строки
+				insert_hash_table(buf_word);
+				/*обнуляем слово в буфере*/
+				j=0;
+				buf_word[0] = '\0';
+
+			} else if (buf_file[i] != '\n') {
+		
+				buf_word[j] = buf_file[i];
+	
+				if (++j == SIZE_WORD)
+					error_exit("Найдено слишком длинное слово");
+
+			}
+			i++;
 		}
 	}
 	
-
 	if (n < 0){
 		printf("Ошибка чтения\n");
 		return 1;
@@ -62,16 +88,26 @@ main(int argc, char *argv[])
 		return 1;
 	}
 
-	/*
-	 *
-	 * */
-	char *user_string = "123456789";
+	if (strlen(buf_word)){
+                buf_word[j] = '\0';//конец строки
+		insert_hash_table(buf_word);
+	}
 
-	entry *e = new_entry(user_string);
+	print_hash_table();
 
-	free(e);
+	destroy_hash_table();
 
 	return 0;
+
+}
+
+void
+print_hash_table(){
+
+	for (int i=0; i < size_hash_table; i++){
+		if (hash_table[i])
+			printf("Word: \"%s\", Count: %u\n", hash_table[i]->key, hash_table[i]->value);
+	}
 
 }
 
@@ -98,6 +134,9 @@ hashcode(unsigned char *str) {
     unsigned long long hash = 5381;
     int c;
  
+    if (size_hash_table == 1)
+	    error_exit("Размер таблицы должен быть более 1/n");
+
     while ((c = *str++)) {
         hash = ((hash << 5) + hash) ^ c;
     }
@@ -112,12 +151,13 @@ init_hash_table() {
 	if (hash_table == NULL)
 		error_exit("Не удалось выделить память под таблицу");
 
-
-
 }
 
 void
 insert_hash_table(char *str) {
+
+	if (!strlen(str))
+		return;
 
 	int index = (int) (hashcode((unsigned char*)str) % size_hash_table);
 
@@ -128,14 +168,14 @@ insert_hash_table(char *str) {
 	while (i < red_line){
 		
 		if (hash_table[i]){
-			if (strcmp(hash_table[index]->key, str) == 0){
-                    		hash_table[index]->value++;
+			if (strcmp(hash_table[i]->key, str) == 0){
+                    		hash_table[i]->value++;
 				success = true;
 				break;
 			}
 		} else {
 	
-			hash_table[index] = new_entry(str);
+			hash_table[i] = new_entry(str);
 			success = true;
 			break;
 		}
@@ -205,6 +245,20 @@ rebase_hash_table(char *str){
 	/*делаем повторную вставку элемента.
 	 * Сейчас таблица увеличилась и операция вставки будет успешной*/
 	insert_hash_table(str);
+
+}
+
+void
+destroy_hash_table(){
+
+	for (int i = 0; i < size_hash_table; i++){
+	
+		if (hash_table[i])
+			free(hash_table[i]);
+
+	}
+
+	free(hash_table);
 
 }
 
