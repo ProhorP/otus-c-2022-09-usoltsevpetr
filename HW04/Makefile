@@ -1,13 +1,12 @@
 CC=gcc
 CFLAGS=-c -Wall -Wextra -Wpedantic -std=c11 -g
 
-all: weater
+all: weather
 
-weater: main.o
-	$(CC) main.o -o weater
-
+weather: main.o
+	$(CC) main.o -o weather -lcurl -ldl
 main.o: main.c
 	$(CC) $(CFLAGS) main.c
 
 clean:
-	rm -rf *.o weater
+	rm -rf *.o weather
