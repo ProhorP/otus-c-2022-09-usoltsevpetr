@@ -136,11 +136,17 @@ main (int argc, char *argv[])
       ("Установка параметра CURLOPT_ERRORBUFFER привела к результату %d",
        (int) res);
 
+  if ((res =
+       fptr_curl_easy_setopt (curl, CURLOPT_VERBOSE, 1)) != CURLE_OK)
+    printf
+      ("Установка параметра CURLOPT_VERBOSE привела к результату %d",
+       (int) res);
+
+
   /* set the error buffer as empty before performing a request */
   errbuf[0] = 0;
 
   if ((res = fptr_curl_easy_perform (curl)) != CURLE_OK)
-    printf
       ("Код возврата при доступе на сайт = %d. %s\n",
        (int) res, errbuf);
 
