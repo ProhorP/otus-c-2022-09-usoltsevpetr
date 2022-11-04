@@ -125,7 +125,7 @@ main (int argc, char *argv[])
 
   if ((res =
        fptr_curl_easy_setopt (curl, CURLOPT_URL,
-			      "https://example.com")) != CURLE_OK)
+			      "https://example!!!!.com")) != CURLE_OK)
     printf
       ("Установка параметра CURLOPT_URL привела к результату %d",
        (int) res);
@@ -136,10 +136,21 @@ main (int argc, char *argv[])
       ("Установка параметра CURLOPT_ERRORBUFFER привела к результату %d",
        (int) res);
 
+  int value_1 = 1;
+
   if ((res =
-       fptr_curl_easy_setopt (curl, CURLOPT_VERBOSE, 1)) != CURLE_OK)
+       fptr_curl_easy_setopt (curl, CURLOPT_VERBOSE,
+			      (int *) &value_1)) != CURLE_OK)
     printf
       ("Установка параметра CURLOPT_VERBOSE привела к результату %d",
+       (int) res);
+
+  char buf[4096] = {0};
+
+  if ((res =
+       fptr_curl_easy_setopt (curl, CURLOPT_WRITEDATA, buf)) != CURLE_OK)
+    printf
+      ("Установка параметра CURLOPT_WRITEDATA, привела к результату %d",
        (int) res);
 
 
@@ -147,6 +158,7 @@ main (int argc, char *argv[])
   errbuf[0] = 0;
 
   if ((res = fptr_curl_easy_perform (curl)) != CURLE_OK)
+    printf
       ("Код возврата при доступе на сайт = %d. %s\n",
        (int) res, errbuf);
 
