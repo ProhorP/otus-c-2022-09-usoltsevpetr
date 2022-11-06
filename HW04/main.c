@@ -1,10 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 // #include <sys/stat.h>
 // #include <fcntl.h>
 // #include <unistd.h>
 #include <dlfcn.h>
 #include <curl/curl.h>
+
+#define CISSON_IMPLEMENTATION
+#include "cisson/cisson.h"
+
 
 typedef CURLcode (type_fptr_curl_global_init) (long flags);
 typedef void (type_fptr_curl_global_cleanup) (void);
@@ -16,8 +21,19 @@ typedef CURLcode (type_fptr_curl_easy_setopt) (CURL * handle,
 					       CURLoption option,
 					       void *param);
 typedef CURLcode (type_fptr_curl_easy_perform) (CURL * easy_handle);
+typedef struct curl_slist *(type_fptr_curl_slist_append) (struct curl_slist *
+							  list,
+							  const char *string);
+typedef void (type_fptr_curl_slist_free_all) (struct curl_slist * list);
+
+struct memory
+{
+  char *response;
+  size_t size;
+};
 
 void error_exit (char *str);
+static size_t cb (void *data, size_t size, size_t nmemb, void *userp);
 
 int
 main (int argc, char *argv[])
@@ -87,11 +103,25 @@ main (int argc, char *argv[])
       ("Не удалось найти функцию curl_easy_setopt");
 
   type_fptr_curl_easy_perform *fptr_curl_easy_perform =
-    (type_fptr_curl_easy_perform *) dlsym (dyn_lib, "curl_easy_setopt");
+    (type_fptr_curl_easy_perform *) dlsym (dyn_lib, "curl_easy_perform");
 
   if (!fptr_curl_easy_perform)
     error_exit
       ("Не удалось найти функцию curl_easy_perform");
+
+  type_fptr_curl_slist_append *fptr_curl_slist_append =
+    (type_fptr_curl_slist_append *) dlsym (dyn_lib, "curl_slist_append");
+
+  if (!fptr_curl_slist_append)
+    error_exit
+      ("Не удалось найти функцию curl_slist_append");
+
+  type_fptr_curl_slist_free_all *fptr_curl_slist_free_all =
+    (type_fptr_curl_slist_free_all *) dlsym (dyn_lib, "curl_slist_free_all");
+
+  if (!fptr_curl_slist_free_all)
+    error_exit
+      ("Не удалось найти функцию curl_slist_free_all");
 
   /*Начинаем работу */
 
@@ -105,7 +135,6 @@ main (int argc, char *argv[])
 
   printf ("Используется версия curl: %s\n",
 	  curl_about->version);
-
   /*Делаем инициализацию */
 
   if (fptr_curl_global_init (CURL_GLOBAL_ALL))
@@ -120,12 +149,22 @@ main (int argc, char *argv[])
     error_exit
       ("Не удалось получить простой интерфейс curl");
 
-  CURLcode res;
   char errbuf[CURL_ERROR_SIZE];
+  CURLcode res;
+/*
+  if ((res =
+       fptr_curl_easy_setopt (curl, CURLOPT_URL,
+			      "https://example.com")) != CURLE_OK)
+    printf
+      ("Установка параметра CURLOPT_URL привела к результату %d",
+       (int) res);
+*/
+
 
   if ((res =
        fptr_curl_easy_setopt (curl, CURLOPT_URL,
-			      "https://example!!!!.com")) != CURLE_OK)
+			      "https://api.weather.yandex.ru/v2/informers?lat=55.75396&lon=37.620393&lang=ru_RU"))
+      != CURLE_OK)
     printf
       ("Установка параметра CURLOPT_URL привела к результату %d",
        (int) res);
@@ -145,22 +184,45 @@ main (int argc, char *argv[])
       ("Установка параметра CURLOPT_VERBOSE привела к результату %d",
        (int) res);
 
-  char buf[4096] = {0};
 
   if ((res =
-       fptr_curl_easy_setopt (curl, CURLOPT_WRITEDATA, buf)) != CURLE_OK)
+       fptr_curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION,
+			      (void *) cb)) != CURLE_OK)
     printf
-      ("Установка параметра CURLOPT_WRITEDATA, привела к результату %d",
+      ("Установка параметра CURLOPT_WRITEDATA привела к результату %d",
+       (int) res);
+
+  struct memory chunk = { 0 };
+
+  if ((res =
+       fptr_curl_easy_setopt (curl, CURLOPT_WRITEDATA,
+			      (void *) &chunk)) != CURLE_OK)
+    printf
+      ("Установка параметра CURLOPT_WRITEDATA привела к результату %d",
+       (int) res);
+
+  struct curl_slist *list = NULL;
+
+  list =
+    fptr_curl_slist_append (list,
+			    "X-Yandex-API-Key: 5b2f9374-6470-4f19-8d29-e5e27adf5d04");
+
+  if ((res =
+       fptr_curl_easy_setopt (curl, CURLOPT_HTTPHEADER, list)) != CURLE_OK)
+    printf
+      ("Установка параметра CURLOPT_HTTPHEADER привела к результату %d",
        (int) res);
 
 
   /* set the error buffer as empty before performing a request */
   errbuf[0] = 0;
 
+
   if ((res = fptr_curl_easy_perform (curl)) != CURLE_OK)
     printf
       ("Код возврата при доступе на сайт = %d. %s\n",
        (int) res, errbuf);
+
 
   /*Очистка простого интерфейса не возвращает результата */
   fptr_curl_easy_cleanup (curl);
@@ -174,6 +236,25 @@ main (int argc, char *argv[])
 
   dlclose (dyn_lib);
 
+  /*парсим json библиотекой cisson */
+  char *str = "{\"foo\":[1,2,3], \"bar\": null}";
+
+  struct json_tree json_tree = { 0 };
+  rjson (str, &json_tree);	/* rjson reads json into a tree */
+
+  puts (to_string_pointer (&json_tree, query (&json_tree, "/foo")));	/* [1,2,3] */
+  puts (to_string_pointer (&json_tree, query (&json_tree, "/foo/0")));	/* 1 */
+  puts (to_string_pointer (&json_tree, query (&json_tree, "/foo/1")));	/* 2 */
+  puts (to_string_pointer (&json_tree, query (&json_tree, "/foo/2")));	/* 3 */
+  puts (to_string_pointer (&json_tree, query (&json_tree, "/bar")));	/* null */
+
+  /*разработчик библиотеки не используети в коде json_error
+   * и поэтому чтобы компилятор не ругался делаю такой костыль*/
+  if (0)
+    printf ("%s\n", json_errors[0]);
+
+  free (chunk.response);
+
   return 0;
 
 }
@@ -185,4 +266,22 @@ error_exit (char *str)
   printf ("%s\n", str);
   exit (1);
 
+}
+
+static size_t
+cb (void *data, size_t size, size_t nmemb, void *userp)
+{
+  size_t realsize = size * nmemb;
+  struct memory *mem = (struct memory *) userp;
+
+  char *ptr = realloc (mem->response, mem->size + realsize + 1);
+  if (ptr == NULL)
+    return 0;			/* out of memory! */
+
+  mem->response = ptr;
+  memcpy (&(mem->response[mem->size]), data, realsize);
+  mem->size += realsize;
+  mem->response[mem->size] = 0;
+
+  return realsize;
 }
