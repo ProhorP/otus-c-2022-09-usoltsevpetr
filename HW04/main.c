@@ -46,14 +46,13 @@ main (int argc, char *argv[])
 		  "\"./weather широта(например 55.75396) долгота(например 37.620393)\"\n");
     }
 
-  printf ("Погода для %s:\n", argv[1]);
+  printf ("Погода для адреса с широтой %s и долготой %s:\n", argv[1], argv[2]);
 
   char url[100] = { 0 };
 
   sprintf (url,
 	   "https://api.weather.yandex.ru/v2/forecast?lat=%s&lon=%s&extra=false",
 	   argv[1], argv[2]);
-  // "https://api.weather.yandex.ru/v2/forecast?lat=55.75396&lon=37.620393&extra=false";
 
   /* подгрузка библиотеки */
 
@@ -164,15 +163,6 @@ main (int argc, char *argv[])
   char errbuf[CURL_ERROR_SIZE];
   CURLcode res;
 
-  /*
-     if ((res =
-     fptr_curl_easy_setopt (curl, CURLOPT_URL,
-     "https://example.com")) != CURLE_OK)
-     printf
-     ("Установка параметра CURLOPT_URL привела к результату %d",
-     (int) res);
-   */
-
   if ((res = fptr_curl_easy_setopt (curl, CURLOPT_URL, url)) != CURLE_OK)
     printf
       ("Установка параметра CURLOPT_URL привела к результату %d",
@@ -247,6 +237,7 @@ main (int argc, char *argv[])
 
   /*парсим json библиотекой cisson */
   struct json_tree json_tree = { 0 };
+
 /* Тестовая строка json для проверки библиотеки
  * структура json согласно API Yandexиз примеров на сайте
   char *str = "{\"forecasts\":[{\"parts\":{\"evening\":{\"condition\":\"ttt\",\"temp_min\":25,\"temp_max\":30,\"wind_speed\":1.8,\"wind_dir\":\"nw\"}}}]}";
