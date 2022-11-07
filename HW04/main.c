@@ -240,7 +240,7 @@ main (int argc, char *argv[])
 
 /* Тестовая строка json для проверки библиотеки
  * структура json согласно API Yandexиз примеров на сайте
-  char *str = "{\"forecasts\":[{\"parts\":{\"evening\":{\"condition\":\"ttt\",\"temp_min\":25,\"temp_max\":30,\"wind_speed\":1.8,\"wind_dir\":\"nw\"}}}]}";
+  char *str = "{\"forecasts\":[{\"parts\":{\"evening\":{\"condition\":\"rain\",\"temp_min\":25,\"temp_max\":30,\"wind_speed\":1.8,\"wind_dir\":\"nw\"}}}]}";
   */
   rjson (chunk.response, &json_tree);	/* rjson reads json into a tree */
 
