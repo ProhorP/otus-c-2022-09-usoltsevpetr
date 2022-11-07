@@ -39,17 +39,21 @@ int
 main (int argc, char *argv[])
 {
 
-  if (argc != 2)
+  if (argc != 3)
     {
       error_exit ("Неверно введена команда\n"
 		  "Нужно ввести в таком формате:\n"
-		  "\"./weather city_name\"\n");
+		  "\"./weather широта(например 55.75396) долгота(например 37.620393)\"\n");
     }
 
   printf ("Погода для %s:\n", argv[1]);
 
-  char *url =
-    "https://api.weather.yandex.ru/v2/forecast?lat=55.75396&lon=37.620393&extra=false";
+  char url[100] = { 0 };
+
+  sprintf (url,
+	   "https://api.weather.yandex.ru/v2/forecast?lat=%s&lon=%s&extra=false",
+	   argv[1], argv[2]);
+  // "https://api.weather.yandex.ru/v2/forecast?lat=55.75396&lon=37.620393&extra=false";
 
   /* подгрузка библиотеки */
 
@@ -229,8 +233,6 @@ main (int argc, char *argv[])
       ("Код возврата при доступе на сайт = %d. %s\n",
        (int) res, errbuf);
 
-  printf ("!!!!!!!!!!!!!!!!\n%s\n!!!!!!!!!!!!!!!!!!!", chunk.response);
-
   /*Очистка простого интерфейса не возвращает результата */
   fptr_curl_easy_cleanup (curl);
 
@@ -244,39 +246,40 @@ main (int argc, char *argv[])
   dlclose (dyn_lib);
 
   /*парсим json библиотекой cisson */
-//  char *str = "{\"foo\":[1,2,3], \"bar\": null}";
-
   struct json_tree json_tree = { 0 };
+
   rjson (chunk.response, &json_tree);	/* rjson reads json into a tree */
 
-  printf ("Тестовое описание погоды: %s\n",
+  char param1[20] = { 0 };
+
+  char param2[20] = { 0 };
+
+  printf ("Описание погоды: %s\n",
 	  to_string_pointer (&json_tree,
 			     query (&json_tree,
 				    "/forecasts/0/parts/evening/condition")));
 
+  strcpy (param1, to_string_pointer (&json_tree,
+				     query (&json_tree,
+					    "/forecasts/0/parts/evening/temp_min")));
+  strcpy (param2, to_string_pointer (&json_tree,
+				     query (&json_tree,
+					    "/forecasts/0/parts/evening/temp_max")));
+
+
   printf ("Температура в диапазоне от %s о %s\n",
-	  to_string_pointer (&json_tree,
-			     query (&json_tree,
-				    "/forecasts/0/parts/evening/temp_min")),
-	  to_string_pointer (&json_tree,
-			     query (&json_tree,
-				    "/forecasts/0/parts/evening/temp_max")));
+	  param1, param2);
+
+  strcpy (param1, to_string_pointer (&json_tree,
+				     query (&json_tree,
+					    "/forecasts/0/parts/evening/wind_speed")));
+  strcpy (param2, to_string_pointer (&json_tree,
+				     query (&json_tree,
+					    "/forecasts/0/parts/evening/wind_dir")));
+
 
   printf ("Скорость ветра %s, направление %s\n",
-	  to_string_pointer (&json_tree,
-			     query (&json_tree,
-				    "/forecasts/0/parts/evening/wind_speed")),
-	  to_string_pointer (&json_tree,
-			     query (&json_tree,
-				    "/forecasts/0/parts/evening/wind_dir")));
-
-
-
-  //puts (to_string_pointer (&json_tree, query (&json_tree, "/foo")));  /* [1,2,3] */
-  //puts (to_string_pointer (&json_tree, query (&json_tree, "/foo/0")));        /* 1 */
-  //puts (to_string_pointer (&json_tree, query (&json_tree, "/foo/1")));        /* 2 */
-  //puts (to_string_pointer (&json_tree, query (&json_tree, "/foo/2")));        /* 3 */
-  //puts (to_string_pointer (&json_tree, query (&json_tree, "/bar")));  /* null */
+	  param1, param2);
 
   /*разработчик библиотеки не используети в коде json_error
    * и поэтому чтобы компилятор не ругался делаю такой костыль*/
