@@ -258,7 +258,7 @@ main (int argc, char *argv[])
 	  to_string_pointer (&json_tree,
 			     query (&json_tree,
 				    "/forecasts/0/parts/evening/temp_min")),
-	  to_string_pointer (&json_tree,
+	 to_string_pointer (&json_tree,
 			     query (&json_tree,
 				    "/forecasts/0/parts/evening/temp_max")));
 
