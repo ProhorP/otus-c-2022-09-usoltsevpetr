@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
+#include <errno.h>
+#include <ctype.h>
 
 #define BUFFSIZE 4096
 #define SIZE_WORD 1024
@@ -34,13 +36,14 @@ main(int argc, char *argv[])
 		printf("Неверно введена команда\n"
 			"Нужно ввести в таком формате:\n"
 			 "\"./count_words file\"\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	int		fd;
 
 	if ((fd = open(argv[1], O_RDONLY)) < 0){
 		printf("Ошибка вызова open(чтение) для файла %s\n", argv[1]);
+		perror("Подробное описание ошибки");
 		return 1;
 	}
 
@@ -54,7 +57,7 @@ main(int argc, char *argv[])
 		i = 0;
 		while (i < n){
 
-			if (buf_file[i] == ' '){
+			if (isspace(buf_file[i])){
 				
 				/*слова считаем по пробелам
 				 * могут быть знаки препинания, но не зная кодировки файла
@@ -205,9 +208,14 @@ rebase_hash_table(char *str){
 	if (new_hash_table == NULL)
 		error_exit("Не удалось выделить память под таблицу");
 
-	int	i=0, j=0, index=0, red_line=0;
+	int	i=0, j=0, index=0, red_line=0, n = size_hash_table;
 
-	while (i < size_hash_table){
+	/*запоминаем новый размер таблицы
+	 * чтобы hashindex вычисляла индекс по размеру новой таблицы*/
+	size_hash_table = new_size_hash_table;
+
+
+	while (i < n){
 	
 		index = hashindex(hash_table[i]->key);
 		red_line = new_size_hash_table;
@@ -232,9 +240,6 @@ rebase_hash_table(char *str){
 			
 		i++;
 	}
-
-	/*запоминаем новый размер таблицы*/
-	size_hash_table = new_size_hash_table;
 
 	/*очищаем старую таблицу указателей*/
 	free(hash_table);
@@ -266,6 +271,6 @@ void
 error_exit(char *str){
 
 	printf("%s\n", str);
-	exit(1);
+	exit(EXIT_FAILURE);
 
 }
