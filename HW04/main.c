@@ -6,10 +6,7 @@
 // #include <unistd.h>
 #include <dlfcn.h>
 #include <curl/curl.h>
-
-#define CISSON_IMPLEMENTATION
-#include "cisson/cisson.h"
-
+#include "parson/parson.h"
 
 typedef CURLcode (type_fptr_curl_global_init) (long flags);
 typedef void (type_fptr_curl_global_cleanup) (void);
@@ -46,7 +43,9 @@ main (int argc, char *argv[])
 		  "\"./weather широта(например 55.75396) долгота(например 37.620393)\"\n");
     }
 
-  printf ("Погода для адреса с широтой %s и долготой %s:\n", argv[1], argv[2]);
+  printf
+    ("Погода для адреса с широтой %s и долготой %s:\n",
+     argv[1], argv[2]);
 
   char url[100] = { 0 };
 
@@ -223,6 +222,12 @@ main (int argc, char *argv[])
       ("Код возврата при доступе на сайт = %d. %s\n",
        (int) res, errbuf);
 
+  /*Освобождение памяти выделенной для переменной curl_slist
+   * (использова для передачи заголовка)*/
+
+  fptr_curl_slist_free_all (list);
+
+
   /*Очистка простого интерфейса не возвращает результата */
   fptr_curl_easy_cleanup (curl);
 
@@ -235,50 +240,34 @@ main (int argc, char *argv[])
 
   dlclose (dyn_lib);
 
-  /*парсим json библиотекой cisson */
-  struct json_tree json_tree = { 0 };
+  /*парсим json библиотекой parson */
+
+  JSON_Value *root_value = json_parse_string (chunk.response);
+
+  JSON_Object *evening_object =
+    json_object_get_object (json_object_get_object
+			    (json_array_get_object
+			     (json_object_get_array
+			      (json_value_get_object (root_value),
+			       "forecasts"), 0), "parts"), "evening");
 
 /* Тестовая строка json для проверки библиотеки
- * структура json согласно API Yandexиз примеров на сайте
+ * структура json согласно API Yandex из примеров на сайте
   char *str = "{\"forecasts\":[{\"parts\":{\"evening\":{\"condition\":\"rain\",\"temp_min\":25,\"temp_max\":30,\"wind_speed\":1.8,\"wind_dir\":\"nw\"}}}]}";
   */
-  rjson (chunk.response, &json_tree);	/* rjson reads json into a tree */
-
-  char param1[20] = { 0 };
-
-  char param2[20] = { 0 };
 
   printf ("Описание погоды: %s\n",
-	  to_string_pointer (&json_tree,
-			     query (&json_tree,
-				    "/forecasts/0/parts/evening/condition")));
+	  json_object_get_string (evening_object, "condition"));
 
-  strcpy (param1, to_string_pointer (&json_tree,
-				     query (&json_tree,
-					    "/forecasts/0/parts/evening/temp_min")));
-  strcpy (param2, to_string_pointer (&json_tree,
-				     query (&json_tree,
-					    "/forecasts/0/parts/evening/temp_max")));
+  printf ("Температура в диапазоне от %d до %d\n",
+	  (int) json_object_get_number (evening_object, "temp_min"),
+	  (int) json_object_get_number (evening_object, "temp_max"));
 
+  printf ("Скорость ветра %0.1f, направление %s\n",
+	  (float) json_object_get_number (evening_object, "wind_speed"),
+	  json_object_get_string (evening_object, "wind_dir"));
 
-  printf ("Температура в диапазоне от %s о %s\n",
-	  param1, param2);
-
-  strcpy (param1, to_string_pointer (&json_tree,
-				     query (&json_tree,
-					    "/forecasts/0/parts/evening/wind_speed")));
-  strcpy (param2, to_string_pointer (&json_tree,
-				     query (&json_tree,
-					    "/forecasts/0/parts/evening/wind_dir")));
-
-
-  printf ("Скорость ветра %s, направление %s\n",
-	  param1, param2);
-
-  /*разработчик библиотеки не используети в коде json_error
-   * и поэтому чтобы компилятор не ругался делаю такой костыль*/
-  if (0)
-    printf ("%s\n", json_errors[0]);
+  json_value_free (root_value);
 
   free (chunk.response);
 
