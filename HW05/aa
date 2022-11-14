@@ -1,0 +1,28 @@
+https://gstreamer.freedesktop.org/documentation/plugin-development/basics/boiler.html?gi-language=c
+https://developer.ridgerun.com/wiki/index.php/Creating_a_New_GStreamer_Element_or_Application_Using_Templates
+
+gst-launch-1.0 --version
+
+pkg-config --cflags gstreamer-1.0
+
+export PATH="$PATH:/usr/gcc/4.4/bin"
+
+gst-launch-1.0 -v ./gstmyaudio.so location=test.wav ! audio/x-raw,format=S16LE,channels=1,rate=48000 ! autoaudiosink
+
+Создание шаблонного аудиоплагина:
+cd /home/user/gstreamer/subprojects/gst-plugins-bad/tools
+./gst-element-maker myaudio audiosrc
+
+Взял из скрипта:
+
+Компиляция:
+
+gcc -Wall -Werror -fPIC  -pthread -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/gstreamer-1.0 -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -c -o gstmyaudio.o gstmyaudio.c
+
+Создание:
+
+gcc -shared -o gstmyaudio.so gstmyaudio.o -lgstaudio-1.0 -lgstbase-1.0 -lgstreamer-1.0 -lgobject-2.0 -lglib-2.0
+
+Проверка:
+
+gst-inspect-1.0 ./gstmyaudio.so
