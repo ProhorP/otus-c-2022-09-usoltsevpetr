@@ -38,6 +38,7 @@
 #include <gst/audio/gstaudiosrc.h>
 #include "gstmyaudio.h"
 #include <stdio.h>
+#include <glib/gprintf.h>
 
 GST_DEBUG_CATEGORY_STATIC (gst_myaudio_debug_category);
 #define GST_CAT_DEFAULT gst_myaudio_debug_category
@@ -46,19 +47,20 @@ GST_DEBUG_CATEGORY_STATIC (gst_myaudio_debug_category);
 
 
 static void gst_myaudio_set_property (GObject * object,
-    guint property_id, const GValue * value, GParamSpec * pspec);
-static void gst_myaudio_get_property (GObject * object,
-    guint property_id, GValue * value, GParamSpec * pspec);
+				      guint property_id, const GValue * value,
+				      GParamSpec * pspec);
+static void gst_myaudio_get_property (GObject * object, guint property_id,
+				      GValue * value, GParamSpec * pspec);
 static void gst_myaudio_dispose (GObject * object);
 static void gst_myaudio_finalize (GObject * object);
 
 static gboolean gst_myaudio_open (GstAudioSrc * src);
 static gboolean gst_myaudio_prepare (GstAudioSrc * src,
-    GstAudioRingBufferSpec * spec);
+				     GstAudioRingBufferSpec * spec);
 static gboolean gst_myaudio_unprepare (GstAudioSrc * src);
 static gboolean gst_myaudio_close (GstAudioSrc * src);
 static guint gst_myaudio_read (GstAudioSrc * src, gpointer data, guint length,
-    GstClockTime * timestamp);
+			       GstClockTime * timestamp);
 static guint gst_myaudio_delay (GstAudioSrc * src);
 static void gst_myaudio_reset (GstAudioSrc * src);
 
@@ -68,41 +70,58 @@ static void gst_myaudio_reset (GstAudioSrc * src);
 
 enum
 {
-  PROP_0
+  PROP_0,
+  PROP_LOCATION
 };
 
 /* pad templates */
 
+
 /* FIXME add/remove the formats that you want to support */
 static GstStaticPadTemplate gst_myaudio_src_template =
 GST_STATIC_PAD_TEMPLATE ("src",
-    GST_PAD_SRC,
-    GST_PAD_ALWAYS,
-    GST_STATIC_CAPS ("audio/x-raw,format=S16LE,rate=[1,max],"
-      "channels=[1,max],layout=interleaved")
-    );
+			 GST_PAD_SRC,
+			 GST_PAD_ALWAYS,
+			 GST_STATIC_CAPS
+			 ("audio/x-raw,format=S16LE,rate=[1,max],"
+			  "channels=[1,max],layout=interleaved"));
 
+
+#if 0
+/* FIXME add/remove the formats that you want to support */
+static GstStaticPadTemplate gst_myaudio_src_template =
+GST_STATIC_PAD_TEMPLATE ("src",
+			 GST_PAD_SRC,
+			 GST_PAD_ALWAYS,
+			 GST_STATIC_CAPS
+			 ("audio/x-raw,format=S16LE,rate=48000,"
+			  "channels=1,layout=interleaved"));
+
+#endif
 
 /* class initialization */
 
 G_DEFINE_TYPE_WITH_CODE (GstMyaudio, gst_myaudio, GST_TYPE_AUDIO_SRC,
-  GST_DEBUG_CATEGORY_INIT (gst_myaudio_debug_category, "myaudio", 0,
-  "debug category for myaudio element"));
+			 GST_DEBUG_CATEGORY_INIT (gst_myaudio_debug_category,
+						  "myaudio", 0,
+						  "debug category for myaudio element"));
 
 static void
 gst_myaudio_class_init (GstMyaudioClass * klass)
 {
+  printf ("gst_myaudio_class_init");
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
   GstAudioSrcClass *audio_src_class = GST_AUDIO_SRC_CLASS (klass);
 
   /* Setting up pads and setting metadata should be moved to
      base_class_init if you intend to subclass this class. */
-  gst_element_class_add_static_pad_template (GST_ELEMENT_CLASS(klass),
-      &gst_myaudio_src_template);
+  gst_element_class_add_static_pad_template (GST_ELEMENT_CLASS (klass),
+					     &gst_myaudio_src_template);
 
-  gst_element_class_set_static_metadata (GST_ELEMENT_CLASS(klass),
-      "FIXME Long name", "Generic", "FIXME Description",
-      "FIXME <fixme@example.com>");
+  gst_element_class_set_static_metadata (GST_ELEMENT_CLASS (klass),
+					 "FIXME Long name", "Generic",
+					 "FIXME Description",
+					 "FIXME <fixme@example.com>");
 
   gobject_class->set_property = gst_myaudio_set_property;
   gobject_class->get_property = gst_myaudio_get_property;
@@ -116,48 +135,74 @@ gst_myaudio_class_init (GstMyaudioClass * klass)
   audio_src_class->delay = GST_DEBUG_FUNCPTR (gst_myaudio_delay);
   audio_src_class->reset = GST_DEBUG_FUNCPTR (gst_myaudio_reset);
 
+  g_object_class_install_property (gobject_class, PROP_LOCATION,
+				   g_param_spec_string ("location",
+							"File Location",
+							"Location of the file to read",
+							NULL,
+							G_PARAM_READWRITE |
+							G_PARAM_STATIC_STRINGS
+							|
+							GST_PARAM_MUTABLE_READY));
+
 //audio_src_class->start = GST_DEBUG_FUNCPTR (gst_myaudio_start);  
 //audio_src_class->stop = GST_DEBUG_FUNCPTR (gst_myaudio_stop);  
 }
 
 static void
-gst_myaudio_init (GstMyaudio *myaudio)
+gst_myaudio_init (GstMyaudio * myaudio)
 {
+  printf ("gst_myaudio_init");
 }
 
 void
 gst_myaudio_set_property (GObject * object, guint property_id,
-    const GValue * value, GParamSpec * pspec)
+			  const GValue * value, GParamSpec * pspec)
 {
+  printf ("gst_myaudio_set_property");
   GstMyaudio *myaudio = GST_MYAUDIO (object);
 
   GST_DEBUG_OBJECT (myaudio, "set_property");
 
-  switch (property_id) {
+  switch (property_id)
+    {
+
+    case PROP_LOCATION:
+      myaudio->location = g_strdup (g_value_get_string (value));
+      g_printf ("!!!!!!!location=%s!!!!!!", myaudio->location);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
-  }
+    }
 }
 
 void
 gst_myaudio_get_property (GObject * object, guint property_id,
-    GValue * value, GParamSpec * pspec)
+			  GValue * value, GParamSpec * pspec)
 {
+  printf ("gst_myaudio_get_property");
   GstMyaudio *myaudio = GST_MYAUDIO (object);
 
   GST_DEBUG_OBJECT (myaudio, "get_property");
 
-  switch (property_id) {
+  switch (property_id)
+    {
+    case PROP_LOCATION:
+      g_value_set_string (value, myaudio->location);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
-  }
+    }
 }
 
 void
 gst_myaudio_dispose (GObject * object)
 {
+  printf ("gst_myaudio_dispose");
   GstMyaudio *myaudio = GST_MYAUDIO (object);
 
   GST_DEBUG_OBJECT (myaudio, "dispose");
@@ -170,6 +215,7 @@ gst_myaudio_dispose (GObject * object)
 void
 gst_myaudio_finalize (GObject * object)
 {
+  printf ("gst_myaudio_finalize");
   GstMyaudio *myaudio = GST_MYAUDIO (object);
 
   GST_DEBUG_OBJECT (myaudio, "finalize");
@@ -184,6 +230,7 @@ static gboolean
 gst_myaudio_open (GstAudioSrc * src)
 {
 
+  printf ("gst_myaudio_open");
   GstMyaudio *myaudio = GST_MYAUDIO (src);
 
   GST_DEBUG_OBJECT (myaudio, "open");
@@ -220,6 +267,7 @@ gst_myaudio_stop (GstAudioSrc * src)
 static gboolean
 gst_myaudio_prepare (GstAudioSrc * src, GstAudioRingBufferSpec * spec)
 {
+  printf ("gst_myaudio_prepare");
   GstMyaudio *myaudio = GST_MYAUDIO (src);
 
   GST_DEBUG_OBJECT (myaudio, "prepare");
@@ -231,6 +279,7 @@ gst_myaudio_prepare (GstAudioSrc * src, GstAudioRingBufferSpec * spec)
 static gboolean
 gst_myaudio_unprepare (GstAudioSrc * src)
 {
+  printf ("gst_myaudio_unprepare");
   GstMyaudio *myaudio = GST_MYAUDIO (src);
 
   GST_DEBUG_OBJECT (myaudio, "unprepare");
@@ -242,6 +291,7 @@ gst_myaudio_unprepare (GstAudioSrc * src)
 static gboolean
 gst_myaudio_close (GstAudioSrc * src)
 {
+  printf ("gst_myaudio_close");
   GstMyaudio *myaudio = GST_MYAUDIO (src);
 
   GST_DEBUG_OBJECT (myaudio, "close");
@@ -252,19 +302,21 @@ gst_myaudio_close (GstAudioSrc * src)
 /* read samples from the device */
 static guint
 gst_myaudio_read (GstAudioSrc * src, gpointer data, guint length,
-    GstClockTime * timestamp)
+		  GstClockTime * timestamp)
 {
+  printf ("gst_myaudio_read");
   GstMyaudio *myaudio = GST_MYAUDIO (src);
 
   GST_DEBUG_OBJECT (myaudio, "read");
 
-  return 0;
+  return -1;
 }
 
 /* get number of samples queued in the device */
 static guint
 gst_myaudio_delay (GstAudioSrc * src)
 {
+  printf ("gst_myaudio_delay");
   GstMyaudio *myaudio = GST_MYAUDIO (src);
 
   GST_DEBUG_OBJECT (myaudio, "delay");
@@ -276,6 +328,7 @@ gst_myaudio_delay (GstAudioSrc * src)
 static void
 gst_myaudio_reset (GstAudioSrc * src)
 {
+  printf ("gst_myaudio_reset");
   GstMyaudio *myaudio = GST_MYAUDIO (src);
 
   GST_DEBUG_OBJECT (myaudio, "reset");
@@ -286,10 +339,11 @@ static gboolean
 plugin_init (GstPlugin * plugin)
 {
 
+  printf ("plugin_init");
   /* FIXME Remember to set the rank if it's an element that is meant
      to be autoplugged by decodebin. */
   return gst_element_register (plugin, "myaudio", GST_RANK_NONE,
-      GST_TYPE_MYAUDIO);
+			       GST_TYPE_MYAUDIO);
 }
 
 /* FIXME: these are normally defined by the GStreamer build system.
@@ -310,8 +364,8 @@ plugin_init (GstPlugin * plugin)
 #endif
 
 GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
-    GST_VERSION_MINOR,
-    myaudio,
-    "myaudio description",
-    plugin_init, VERSION, "LGPL", PACKAGE_NAME, GST_PACKAGE_ORIGIN)
-
+		   GST_VERSION_MINOR,
+		   myaudio,
+		   "myaudio description",
+		   plugin_init, VERSION, "LGPL", PACKAGE_NAME,
+		   GST_PACKAGE_ORIGIN)

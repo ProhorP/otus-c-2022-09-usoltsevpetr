@@ -37,6 +37,8 @@ struct _GstMyaudio
 {
   GstAudioSrc base_myaudio;
 
+  gchar* location;
+
 };
 
 struct _GstMyaudioClass
