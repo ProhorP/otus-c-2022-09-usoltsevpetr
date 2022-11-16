@@ -20,7 +20,7 @@
 #ifndef _GST_MYAUDIO_H_
 #define _GST_MYAUDIO_H_
 
-#include <gst/audio/gstaudiosrc.h>
+#include <gst/base/gstbasesrc.h>
 
 G_BEGIN_DECLS
 #define GST_TYPE_MYAUDIO   (gst_myaudio_get_type())
@@ -33,7 +33,7 @@ typedef struct _GstMyaudioClass GstMyaudioClass;
 
 struct _GstMyaudio
 {
-  GstAudioSrc base_myaudio;
+  GstBaseSrc base_myaudio;
 
   gchar *location;
   int fd;
@@ -42,7 +42,7 @@ struct _GstMyaudio
 
 struct _GstMyaudioClass
 {
-  GstAudioSrcClass base_myaudio_class;
+  GstBaseSrcClass base_myaudio_class;
 };
 
 GType gst_myaudio_get_type (void);
