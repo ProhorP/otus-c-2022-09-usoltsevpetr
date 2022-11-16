@@ -23,13 +23,11 @@
 #include <gst/audio/gstaudiosrc.h>
 
 G_BEGIN_DECLS
-
 #define GST_TYPE_MYAUDIO   (gst_myaudio_get_type())
 #define GST_MYAUDIO(obj)   (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_MYAUDIO,GstMyaudio))
 #define GST_MYAUDIO_CLASS(klass)   (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_MYAUDIO,GstMyaudioClass))
 #define GST_IS_MYAUDIO(obj)   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_MYAUDIO))
 #define GST_IS_MYAUDIO_CLASS(obj)   (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_MYAUDIO))
-
 typedef struct _GstMyaudio GstMyaudio;
 typedef struct _GstMyaudioClass GstMyaudioClass;
 
@@ -37,7 +35,8 @@ struct _GstMyaudio
 {
   GstAudioSrc base_myaudio;
 
-  gchar* location;
+  gchar *location;
+  int fd;
 
 };
 
@@ -49,5 +48,4 @@ struct _GstMyaudioClass
 GType gst_myaudio_get_type (void);
 
 G_END_DECLS
-
 #endif

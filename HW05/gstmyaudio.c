@@ -39,6 +39,9 @@
 #include "gstmyaudio.h"
 #include <stdio.h>
 #include <glib/gprintf.h>
+#include <unistd.h>
+#include <fcntl.h>
+
 
 GST_DEBUG_CATEGORY_STATIC (gst_myaudio_debug_category);
 #define GST_CAT_DEFAULT gst_myaudio_debug_category
@@ -235,6 +238,13 @@ gst_myaudio_open (GstAudioSrc * src)
 
   GST_DEBUG_OBJECT (myaudio, "open");
 
+  if ((myaudio->fd = open (myaudio->location, O_RDONLY)) < 0)
+    {
+      perror
+	("Ошибка вызова open(чтение) для файла\n");
+      return FALSE;
+    }
+
   return TRUE;
 }
 
@@ -272,6 +282,16 @@ gst_myaudio_prepare (GstAudioSrc * src, GstAudioRingBufferSpec * spec)
 
   GST_DEBUG_OBJECT (myaudio, "prepare");
 
+  printf("spec->info.rate:%d\n", spec->info.rate);
+
+         spec->segsize = (gint) (spec->info.bpf * spec->info.rate * spec->latency_time /
+            GST_MSECOND);
+        spec->segtotal = (gint) ((gfloat) spec->buffer_time /
+            (gfloat) spec->latency_time + 0.5);
+
+  printf("spec->segsize:%d\n", spec->segsize);
+  printf("spec->segtotal:%d\n", spec->segtotal);
+
   return TRUE;
 }
 
@@ -296,6 +316,13 @@ gst_myaudio_close (GstAudioSrc * src)
 
   GST_DEBUG_OBJECT (myaudio, "close");
 
+  if (close (myaudio->fd) < 0)
+    {
+      perror
+	("Ошибка вызова close(чтение) для файла\n");
+      return FALSE;
+    }
+
   return TRUE;
 }
 
@@ -304,12 +331,26 @@ static guint
 gst_myaudio_read (GstAudioSrc * src, gpointer data, guint length,
 		  GstClockTime * timestamp)
 {
-  printf ("gst_myaudio_read");
+
+  printf ("gst_myaudio_read\n");
+  g_printf ("length:%d\n", length);
+
   GstMyaudio *myaudio = GST_MYAUDIO (src);
 
   GST_DEBUG_OBJECT (myaudio, "read");
 
-  return -1;
+  int a = read (GST_MYAUDIO (src)->fd, data, length);
+  printf ("Считано символов=%d\n", a);
+//return (guint) a;
+
+  return length - 1;
+#if 1
+  if (a == 0)
+    exit(1);
+#endif
+
+  return a;
+
 }
 
 /* get number of samples queued in the device */
@@ -321,7 +362,8 @@ gst_myaudio_delay (GstAudioSrc * src)
 
   GST_DEBUG_OBJECT (myaudio, "delay");
 
-  return 0;
+  //return 0;
+  return 50;
 }
 
 /* reset the audio device, unblock from a write */
