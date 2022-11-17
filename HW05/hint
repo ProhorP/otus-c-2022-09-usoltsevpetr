@@ -12,7 +12,7 @@ export GST_DEBUG=4
 
 Создание шаблонного аудиоплагина:
 cd /home/user/gstreamer/subprojects/gst-plugins-bad/tools
-./gst-element-maker myaudio audiosrc
+./gst-element-maker myaudio basesrc
 
 Взял из скрипта:
 
