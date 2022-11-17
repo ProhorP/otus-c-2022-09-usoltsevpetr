@@ -1,5 +1,8 @@
 https://gstreamer.freedesktop.org/documentation/plugin-development/basics/boiler.html?gi-language=c
 https://developer.ridgerun.com/wiki/index.php/Creating_a_New_GStreamer_Element_or_Application_Using_Templates
+https://gitlab.freedesktop.org/gstreamer/gstreamer/-/blob/main/subprojects/gstreamer/plugins/elements/gstfilesrc.c
+https://otus.ru/journal/oop-na-c-pishem-videopleer/
+https://gitlab.com/otusteam/otus-video-player/-/blob/master/src/vimeosource.c
 
 gst-launch-1.0 --version
 
@@ -15,7 +18,7 @@ cd /home/user/gstreamer/subprojects/gst-plugins-bad/tools
 
 Компиляция:
 
-gcc -Wall -Werror -fPIC  -pthread -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/gstreamer-1.0 -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -c -o gstmyaudio.o gstmyaudio.c
+gcc -Wall -Wextra -Wpedantic -std=c11 -fPIC  -pthread -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/gstreamer-1.0 -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -c -o gstmyaudio.o gstmyaudio.c
 
 Создание:
 
