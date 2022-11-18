@@ -189,8 +189,8 @@ gst_myaudio_start (GstBaseSrc * src)
 
   if ((myaudio->fd = open (myaudio->location, O_RDONLY)) < 0)
     {
-      perror
-	("Ошибка вызова open(чтение) для файла\n");
+      GST_ERROR_OBJECT
+	(src, "Ошибка вызова open(чтение) для файла\n");
       return FALSE;
     }
 
@@ -207,8 +207,8 @@ gst_myaudio_stop (GstBaseSrc * src)
 
   if (close (myaudio->fd) < 0)
     {
-      perror
-	("Ошибка вызова close(чтение) для файла\n");
+      GST_ERROR_OBJECT
+	(src, "Ошибка вызова close(чтение) для файла\n");
       return FALSE;
     }
 
