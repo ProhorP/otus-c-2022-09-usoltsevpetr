@@ -79,9 +79,7 @@ G_DEFINE_TYPE_WITH_CODE (GstMyaudio, gst_myaudio, GST_TYPE_BASE_SRC,
 			 GST_DEBUG_CATEGORY_INIT (gst_myaudio_debug_category,
 						  "myaudio", 0,
 						  "debug category for myaudio element"))
-
-static void
-gst_myaudio_class_init (GstMyaudioClass * klass)
+     static void gst_myaudio_class_init (GstMyaudioClass * klass)
 {
 
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
@@ -224,12 +222,14 @@ gst_myaudio_fill (GstBaseSrc * basesrc, guint64 offset, guint size,
 		  GstBuffer * buf)
 {
 
- GstMyaudio * src = GST_MYAUDIO (basesrc);
+  GstMyaudio *src = GST_MYAUDIO (basesrc);
 
   GstMapInfo info;
 
-
-  lseek (src->fd, offset, SEEK_SET);
+  if ((int) offset == 0)
+    lseek (src->fd, sizeof (header_struct_type), SEEK_SET);
+  else
+    lseek (src->fd, offset, SEEK_SET);
 
   gst_buffer_map (buf, &info, GST_MAP_WRITE);
 
