@@ -17,7 +17,9 @@ main (int argc, char *argv[])
   if (lib_log_init (argv[1]) != LIB_LOG_INIT_SUCCESS)
     return EXIT_FAILURE;
 
-  lib_log_append ("message1", "warning", NULL);
+  lib_log_info ("%s%s", "message1", "message2");
+  lib_log_warning ("%d%d", 555, 666);
+  lib_log_error ("%s%s", "message3", "message4");
 
   if (lib_log_close () != LIB_LOG_CLOSE_SUCCESS)
     return EXIT_FAILURE;
@@ -26,4 +28,3 @@ main (int argc, char *argv[])
   return 0;
 
 }
-
