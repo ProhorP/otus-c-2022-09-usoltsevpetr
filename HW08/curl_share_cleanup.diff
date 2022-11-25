@@ -1,0 +1,24 @@
+--- ../../../clib_orig/src/common/clib-package.c	2020-09-08 02:51:24.000000000 +0800
++++ ../../../clib/src/common/clib-package.c	2022-11-25 22:33:41.835272743 +0800
+@@ -1686,6 +1686,13 @@
+   free(dep);
+ }
+ 
++static void cleanup_curl_share() {
++  if (0 != clib_package_curl_share) {
++    curl_share_cleanup(clib_package_curl_share);
++    clib_package_curl_share = 0;
++  }
++}
++
+ void clib_package_cleanup() {
+   if (0 != visited_packages) {
+     hash_each(visited_packages, {
+@@ -1696,4 +1703,7 @@
+     hash_free(visited_packages);
+     visited_packages = 0;
+   }
++  cleanup_curl_share();
+ }
++
++
