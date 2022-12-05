@@ -1,21 +1,7 @@
-#ifndef _LIB_LOG_
-#define _LIB_LOG_
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdarg.h>
-#include <execinfo.h>
 #include <stdbool.h>
 
-#ifndef max
-#define max(a,b)            (((a) > (b)) ? (a) : (b))
-#endif
-
-#define BT_BUF_SIZE 100
+#ifndef _LIB_LOG_
+#define _LIB_LOG_
 
 #define S(x) #x
 #define S_(x) S(x)
@@ -41,8 +27,6 @@
 	lib_log_append(false,\
 			LIB_LOG_INFO LIB_LOG_FORMAT_PRINT # format LIB_LOG_END_STRING,\
 			__FILE__,__func__,S__LINE__,__VA_ARGS__)
-
-
 
 typedef enum
 {

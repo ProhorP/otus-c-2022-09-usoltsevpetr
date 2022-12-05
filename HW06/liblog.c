@@ -1,4 +1,19 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdarg.h>
+#include <execinfo.h>
+#include <stdbool.h>
 #include "liblog.h"
+
+#ifndef max
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
+
+#define BT_BUF_SIZE 100
 
 int lib_log_fd = 0;
 
