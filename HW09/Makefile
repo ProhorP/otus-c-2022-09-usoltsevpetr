@@ -1,13 +1,13 @@
 CC=gcc
 CFLAGS=-c -Wall -Wextra -Wpedantic -std=c11 -g
 
-all: start
+all: daemon_stat
 
-start: main.o
-	$(CC) main.o -o start
+daemon_stat: main.o
+	$(CC) main.o -o daemon_stat
 
 main.o: main.c
 	$(CC) $(CFLAGS) main.c
 
 clean:
-	rm -rf *.o start
+	rm -rf *.o daemon_stat

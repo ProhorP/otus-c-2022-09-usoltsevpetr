@@ -6,8 +6,12 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
+#include <sys/stat.h>
 
 #define NAME "echo.socket"
+#define FILE_NAME "main.c"
+#define BUFFSIZE 1024
 
 void
 print_error (const char *format, ...)
@@ -23,9 +27,10 @@ int
 main ()
 {
 
-  int sock, msgsock, rval;
+  int sock, msgsock;
   struct sockaddr_un server;
-  char buf[1024];
+  char buf[BUFFSIZE];
+  struct stat statbuf;
 
   sock = socket (AF_UNIX, SOCK_STREAM, 0);
 
@@ -44,23 +49,17 @@ main ()
   for (;;)
     {
       msgsock = accept (sock, 0, 0);
-      if (msgsock == -1)
-	{
-	  perror ("accept");
-	  break;
-	}
+
+      if (stat (FILE_NAME, &statbuf) < 0)
+	snprintf (buf, BUFFSIZE,
+		  "Ошибка вызова функции stat:%s\n",
+		  strerror (errno));
       else
-	do
-	  {
-	    bzero (buf, sizeof (buf));
-	    if ((rval = read (msgsock, buf, 1024)) < 0)
-	      perror ("reading stream message");
-	    else if (rval == 0)
-	      printf ("Ending connection\n");
-	    else
-	      send (msgsock, buf, strlen (buf), 0);
-	  }
-	while (rval > 0);
+	snprintf (buf, BUFFSIZE, "Размер файла в байтах:%ld\n",
+		  statbuf.st_size);
+
+      send (msgsock, buf, strlen (buf), 0);
+
       close (msgsock);
     }
   close (sock);
