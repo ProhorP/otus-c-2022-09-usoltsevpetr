@@ -1,13 +1,15 @@
 CC=gcc
-CFLAGS=-c -Wall -Wextra -Wpedantic -std=c11 -g
+CFLAGS=-c -Wall -Wextra -Wpedantic -std=c11   -g
+GLIB_CONF=`pkg-config --cflags glib-2.0`
+GLIB_LIB=`pkg-config --libs glib-2.0`
 
 all: daemon_stat
 
 daemon_stat: main.o
-	$(CC) main.o -o daemon_stat
+	$(CC) main.o $(GLIB_LIB) -o daemon_stat
 
 main.o: main.c
-	$(CC) $(CFLAGS) main.c
+	$(CC) $(GLIB_CONF) $(CFLAGS) main.c 
 
 clean:
 	rm -rf *.o daemon_stat
