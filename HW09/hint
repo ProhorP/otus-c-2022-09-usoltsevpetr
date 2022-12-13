@@ -1,0 +1,1 @@
+ncat -U "echo.socket"
