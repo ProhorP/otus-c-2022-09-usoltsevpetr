@@ -23,6 +23,7 @@
 char file_name[NAMESIZE] = { 0 };
 char socket_name[NAMESIZE] = { 0 };
 char ini_file[NAMESIZE] = { 0 };
+int sock=0;
 
 void
 print_error (const char *format, ...)
@@ -94,6 +95,17 @@ sig_hup ()
 
   read_conf ();
 }
+
+static void
+sig_quit ()
+{
+  syslog (LOG_INFO,
+	  "Удаление сокета");
+  close (sock);
+  unlink (socket_name);
+
+}
+
 
 void
 daemonize (const char *cmd)
@@ -197,7 +209,7 @@ int
 main (int argc, char **argv)
 {
 
-  int sock, msgsock;
+  int msgsock;
   struct sockaddr_un server;
   char buf[BUFFSIZE];
   struct stat statbuf;
@@ -238,6 +250,22 @@ main (int argc, char **argv)
 	  return EXIT_FAILURE;
 	}
 
+      /*устанавливаем блокировку всех сигналов кроме SIGQUIT
+         с назначением обработчика сигнала 
+       */
+      sa.sa_handler = sig_quit;
+      sigfillset (&sa.sa_mask);
+      sigdelset (&sa.sa_mask, SIGQUIT);
+      sa.sa_flags = 0;
+      if (sigaction (SIGQUIT, &sa, NULL) < 0)
+	{
+	  syslog (LOG_ERR,
+		  "невозможно перехватить сигнал SIGQUIT: %s",
+		  strerror (errno));
+	  return EXIT_FAILURE;
+	}
+
+
     }
 
   /*Далее функционаяльная часть программы */
@@ -274,9 +302,9 @@ main (int argc, char **argv)
 
       close (msgsock);
     }
-  close (sock);
-  unlink (socket_name);
 
-  return EXIT_SUCCESS;
+/*программа в бесконечном цикле
+ее можно только оборвать поэтому кода возврата нет*/
+//  return EXIT_SUCCESS;
 
 }
