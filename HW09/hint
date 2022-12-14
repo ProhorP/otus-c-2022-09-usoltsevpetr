@@ -1,1 +1,3 @@
-ncat -U "daemon_stat.socket"
+ncat -U "/tmp/daemon_stat.socket"
+sudo service daemon_stat start
+tail -f /var/log/syslog
