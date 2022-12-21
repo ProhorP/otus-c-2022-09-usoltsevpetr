@@ -108,6 +108,8 @@ main (int argc, char **argv)
 
   uint32_t a = crc32 ((const void *) src, statbuf.st_size);
 
+  munmap (src, statbuf.st_size);
+
   printf ("%x\n", a);
 
   return EXIT_SUCCESS;
