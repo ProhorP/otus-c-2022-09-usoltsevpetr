@@ -3,11 +3,13 @@
 #include <string.h>
 #include <stdarg.h>
 #include <dirent.h>
+#include <glib.h>
+#include <glib/gprintf.h>
 
 /*чему-то в заголовочнике не объявлен прототип функции seekdir
 но в самой реализации есть
 */
-void seekdir(DIR *dirp, long loc);
+void seekdir (DIR * dirp, long loc);
 
 void
 print_error (const char *format, ...)
@@ -63,6 +65,34 @@ main (int argc, char **argv)
   if (closedir (dp) < 0)
     print_error ("невозможно закрыть каталог %s",
 		 argv[1]);
+
+  GHashTable *hash_table =
+    g_hash_table_new ((GHashFunc) NULL, g_str_equal);
+
+  char *key = "aaa";
+  gchar *key1 = g_strdup (key);
+  gchar *key2 = g_strdup (key);
+
+  gboolean match = g_str_equal ((gconstpointer) key1,
+				(gconstpointer) key2);
+
+  int *val_malloc = malloc (sizeof (int));
+  *val_malloc = 1;
+
+  g_hash_table_insert (hash_table, (gconstpointer) key1, (gpointer) val_malloc);
+
+  gpointer val = g_hash_table_lookup (hash_table, (gconstpointer) key2);
+
+  if (val)
+    *((int *) val) += 1;
+  else
+    g_hash_table_insert (hash_table, (gpointer) g_strdup (key),
+			 (gpointer) val_malloc);
+
+  val = g_hash_table_lookup (hash_table, (gconstpointer) key);
+
+  g_hash_table_destroy (hash_table);
+
 
   return EXIT_SUCCESS;
 
