@@ -67,19 +67,16 @@ main (int argc, char **argv)
 		 argv[1]);
 
   GHashTable *hash_table =
-    g_hash_table_new ((GHashFunc) NULL, g_str_equal);
+    g_hash_table_new (g_str_hash, g_str_equal);
 
   char *key = "aaa";
   gchar *key1 = g_strdup (key);
   gchar *key2 = g_strdup (key);
 
-  gboolean match = g_str_equal ((gconstpointer) key1,
-				(gconstpointer) key2);
-
   int *val_malloc = malloc (sizeof (int));
   *val_malloc = 1;
 
-  g_hash_table_insert (hash_table, (gconstpointer) key1, (gpointer) val_malloc);
+  g_hash_table_insert (hash_table, (gpointer) key1, (gpointer) val_malloc);
 
   gpointer val = g_hash_table_lookup (hash_table, (gconstpointer) key2);
 
@@ -97,3 +94,5 @@ main (int argc, char **argv)
   return EXIT_SUCCESS;
 
 }
+
+
