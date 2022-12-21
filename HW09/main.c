@@ -17,13 +17,14 @@
 
 #define BUFFSIZE 1024
 #define NAMESIZE 200
-#define LOCKFILE "/var/run/daemon_stat.pid"
 #define LOCKMODE (S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)
 
 char file_name[NAMESIZE] = { 0 };
 char socket_name[NAMESIZE] = { 0 };
+char lock_file[NAMESIZE] = { 0 };
 char ini_file[NAMESIZE] = { 0 };
-int sock=0;
+
+int sock = 0;
 
 void
 print_error (const char *format, ...)
@@ -85,6 +86,24 @@ read_conf (void)
 
   strcpy (socket_name, (char *) g_socket_name);
 
+  g_autofree gchar *g_lock_file =
+    g_key_file_get_string (key_file, "First Group", "LockFile", &error);
+  if (g_lock_file == NULL
+      && !g_error_matches (error, G_KEY_FILE_ERROR,
+			   G_KEY_FILE_ERROR_KEY_NOT_FOUND))
+    {
+      g_warning ("Error finding key in key file: %s", error->message);
+      return;
+    }
+  else if (g_lock_file == NULL)
+    {
+      // Fall back to a default value.
+      g_lock_file = g_strdup ("default-value");
+    }
+
+
+  strcpy (lock_file, (char *) g_lock_file);
+
 }
 
 static void
@@ -99,8 +118,7 @@ sig_hup ()
 static void
 sig_quit ()
 {
-  syslog (LOG_INFO,
-	  "Удаление сокета");
+  syslog (LOG_INFO, "Удаление сокета");
   close (sock);
   unlink (socket_name);
 
@@ -180,11 +198,11 @@ already_running (void)
 {
   int fd;
   char buf[16];
-  fd = open (LOCKFILE, O_RDWR | O_CREAT, LOCKMODE);
+  fd = open (lock_file, O_RDWR | O_CREAT, LOCKMODE);
   if (fd < 0)
     {
       syslog (LOG_ERR, "невозможно открыть %s: %s",
-	      LOCKFILE, strerror (errno));
+	      lock_file, strerror (errno));
       exit (EXIT_FAILURE);
     }
   if (lockfile (fd) < 0)
@@ -196,7 +214,7 @@ already_running (void)
 	}
       syslog (LOG_ERR,
 	      "невозможно установить блокировку на %s: %s",
-	      LOCKFILE, strerror (errno));
+	      lock_file, strerror (errno));
       exit (EXIT_FAILURE);
     }
   ftruncate (fd, 0);
@@ -215,17 +233,18 @@ main (int argc, char **argv)
   struct stat statbuf;
   struct sigaction sa;
 
-  /*Если передается параметр "-test" тогда демон не запускается
-     и не создается обработчик сигнала sighub */
-  if (argc == 2 && strcmp (argv[1], "-test") == 0)
-    {
-      strcpy(ini_file, "daemon_stat.ini");
-    }
-  else
-    {
-      strcpy(ini_file, "/etc/daemon_stat.ini");
+  if (argc < 2)
+    print_error
+      ("Нет входящих аргументов. Необходимо передать путь к config-файлу\n");
 
+  strcpy (ini_file, argv[1]);
+
+  read_conf ();
+
+  if (!(argc == 3 && strcmp (argv[2], "-test") == 0))
+    {
       //запуск демона
+
       daemonize ("daemon_stat");
 
       //типовая проверка на дубль демона
@@ -264,12 +283,8 @@ main (int argc, char **argv)
 		  strerror (errno));
 	  return EXIT_FAILURE;
 	}
-
-
     }
-
   /*Далее функционаяльная часть программы */
-  read_conf ();
 
   sock = socket (AF_UNIX, SOCK_STREAM, 0);
 

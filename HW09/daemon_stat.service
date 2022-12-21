@@ -4,11 +4,9 @@ After=systemd-user-sessions.service
 
 [Service]
 Type=forking
-#PIDFile=/var/run/daemon_stat.pid
-ExecStart=/etc/init.d/daemon_stat
+ExecStart=/etc/init.d/daemon_stat /etc/daemon_stat.ini
 ExecReload=/bin/kill -HUP $MAINPID
 ExecStop=/bin/kill -QUIT $MAINPID
-#User=root
 
 [Install]
 WantedBy=multi-user.target
