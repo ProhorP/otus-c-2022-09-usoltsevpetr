@@ -6,6 +6,11 @@
 #include <glib.h>
 #include <glib/gprintf.h>
 #include <pcre.h>
+#include <sys/mman.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 void
 print_error (const char *format, ...)
@@ -208,54 +213,91 @@ add_file_path_thread_data (thread_data * thread_data_array, int count,
 
 }
 
-void parse_logs(int a){
+void
+parse_logs (int a)
+{
 
 /* /^[^\"]+[^\s]+\s([^\s]+)[^\"]+\"\s[\d]+\s([\d]+)\s\"([^\"]+).*$/gm */
 /* 127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "http://www.example.com/start.html" "Mozilla/4.08 [en] (Win98; I ;Nav)" */
 
-printf("Номер потока %d\n", a);
+  printf ("Номер потока %d\n", a);
 
-      char pattern[] = "^[^\"]+[^\\s]+\\s([^\\s]+)[^\"]+\"\\s[\\d]+\\s([\\d]+)\\s\"([^\"]+).*$";
-      char str[] = "127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326 \"http://www.example.com/start.html\" \"Mozilla/4.08 [en] (Win98; I ;Nav)\"";
-//char pattern[] = "^[\\d]+\\s$";
-//char str[] = "123 ";
-      //const unsigned char *tables = NULL;
-      //setlocale (LC_CTYPE, (const char *) "ru.");
-      //tables = pcre_maketables();
-      pcre *re;
-      int options = 0 || PCRE_UCP;
-      const char *error;
-      int erroffset;
-      re  =  pcre_compile ((char *) pattern, options, &error, &erroffset, NULL);
-      if (!re){
-         print_error("%s", "Failed\n");
-      }
-      else{
-         int count = 0;
-         int ovector[30];
-         count  =  pcre_exec  (re,  NULL, (char *) str, strlen(str), 0, 0, ovector, 30);
-         if (!count){
-            printf("%s", "No match\n");
-         }
-         else{
-            for (int c = 0; c < 2 * count; c += 2){
-               if (ovector[c] < 0){
-                  printf("%s", "<unset>\n");
-               }
-               else{
-                  printf("%d/%d\n", ovector[c], ovector[c + 1]);
-               }
-            }
-         }
-      }
+  struct stat statbuf;
+  int fd;
+
+  char *path = "test_log";
+  if ((fd = open (path, O_RDONLY)) < 0)
+    print_error ("невозможно открыть %s для чтения",
+		 path);
+
+  errno = 0;
+
+  if (fstat (fd, &statbuf) < 0)
+    print_error
+      ("Ошибка вызова функции fstat:%s у файла %s\n",
+       strerror (errno), path);
+
+
+  void *src;
+
+  if ((src =
+       mmap (0, statbuf.st_size, PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED)
+    print_error ("%s\n",
+		 "Ошибка вызова функции mmap для входного файла");
+
+  int offset = 0;
+  char pattern[] =
+    "^[^\"]+[^\\s]+\\s([^\\s]+)[^\"]+\"\\s[\\d]+\\s([\\d]+)\\s\"([^\"]+).*$";
+
+  //const unsigned char *tables = NULL;
+  //setlocale (LC_CTYPE, (const char *) "ru.");
+  //tables = pcre_maketables();
+  pcre *re;
+  int options = 0;
+  const char *error;
+  int erroffset;
+  re = pcre_compile ((char *) pattern, options, &error, &erroffset, NULL);
+  if (!re)
+    {
+      print_error ("%s", "Failed\n");
+    }
+  else
+    {
+      int count = 0;
+      int ovector[30];
+      count =
+	pcre_exec (re, NULL, (char *) src, statbuf.st_size, 0, 0, ovector,
+		   30);
+      if (!count)
+	{
+	  printf ("%s", "No match\n");
+	}
+      else
+	{
+	  for (int c = 0; c < 2 * count; c += 2)
+	    {
+	      if (ovector[c] < 0)
+		{
+		  printf ("%s", "<unset>\n");
+		}
+	      else
+		{
+		  printf ("%d/%d\n", ovector[c], ovector[c + 1]);
+		}
+	    }
+	}
+    }
+
+  munmap (src, statbuf.st_size);
+
 }
 
 int
 main (int argc, char **argv)
 {
 
-parse_logs(0);
-return 0;
+  parse_logs (0);
+  return 0;
 
   if (argc != 3)
     print_error ("%s\n",
