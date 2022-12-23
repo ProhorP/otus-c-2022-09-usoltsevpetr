@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <glib.h>
 #include <glib/gprintf.h>
+#include <pcre.h>
 
 void
 print_error (const char *format, ...)
@@ -92,7 +93,7 @@ malloc_key_value_struct (GHashTable * hash_table)
 }
 
 void
-print_top_by_value (GHashTable * hash_table)
+print_top_by_value (GHashTable * hash_table, int count)
 {
 
   /*получаем структуру, содержащую массив КлючЗначение и счетчик количества
@@ -107,7 +108,7 @@ print_top_by_value (GHashTable * hash_table)
   qsort (key_value_struct_buf->array, key_value_struct_buf->count,
 	 sizeof (key_value), compare);
 
-  for (int i = 0; i < key_value_struct_buf->count; i++)
+  for (int i = 0; i < key_value_struct_buf->count && count; i++, count--)
     printf ("%s = %d\n", (char *) key_value_struct_buf->array[i].key,
 	    *((int *) key_value_struct_buf->array[i].value));
 
@@ -207,9 +208,54 @@ add_file_path_thread_data (thread_data * thread_data_array, int count,
 
 }
 
+void parse_logs(int a){
+
+/* /^[^\"]+[^\s]+\s([^\s]+)[^\"]+\"\s[\d]+\s([\d]+)\s\"([^\"]+).*$/gm */
+/* 127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "http://www.example.com/start.html" "Mozilla/4.08 [en] (Win98; I ;Nav)" */
+
+printf("Номер потока %d\n", a);
+
+      char pattern[] = "^[^\"]+[^\\s]+\\s([^\\s]+)[^\"]+\"\\s[\\d]+\\s([\\d]+)\\s\"([^\"]+).*$";
+      char str[] = "127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326 \"http://www.example.com/start.html\" \"Mozilla/4.08 [en] (Win98; I ;Nav)\"";
+//char pattern[] = "^[\\d]+\\s$";
+//char str[] = "123 ";
+      //const unsigned char *tables = NULL;
+      //setlocale (LC_CTYPE, (const char *) "ru.");
+      //tables = pcre_maketables();
+      pcre *re;
+      int options = 0 || PCRE_UCP;
+      const char *error;
+      int erroffset;
+      re  =  pcre_compile ((char *) pattern, options, &error, &erroffset, NULL);
+      if (!re){
+         print_error("%s", "Failed\n");
+      }
+      else{
+         int count = 0;
+         int ovector[30];
+         count  =  pcre_exec  (re,  NULL, (char *) str, strlen(str), 0, 0, ovector, 30);
+         if (!count){
+            printf("%s", "No match\n");
+         }
+         else{
+            for (int c = 0; c < 2 * count; c += 2){
+               if (ovector[c] < 0){
+                  printf("%s", "<unset>\n");
+               }
+               else{
+                  printf("%d/%d\n", ovector[c], ovector[c + 1]);
+               }
+            }
+         }
+      }
+}
+
 int
 main (int argc, char **argv)
 {
+
+parse_logs(0);
+return 0;
 
   if (argc != 3)
     print_error ("%s\n",
@@ -217,6 +263,8 @@ main (int argc, char **argv)
 		 "быть так: ./treads path_log_dir count_threads");
 
   int count_threads = atoi (argv[2]);
+  if (!count_threads)
+    count_threads = 1;
   DIR *dp;
   struct dirent *dirp;
   thread_data *thread_data_array = new_thread_data (count_threads);
@@ -249,10 +297,10 @@ main (int argc, char **argv)
 	  thread_data_array[0].byte_count);
   printf
     ("10 самых “тяжёлых” по суммарному трафику URL’ов:\n");
-  print_top_by_value (thread_data_array[0].url_counter);
+  print_top_by_value (thread_data_array[0].url_counter, 10);
   printf
     ("10 наиболее часто встречающихся Referer’ов:\n");
-  print_top_by_value (thread_data_array[0].ref_counter);
+  print_top_by_value (thread_data_array[0].ref_counter, 10);
 
   free_thread_data (thread_data_array, count_threads);
 
@@ -266,7 +314,7 @@ main (int argc, char **argv)
   char *key2 = "aaa2";
 
   int *val_malloc1 = malloc (sizeof (int));
-  *val_malloc1 = 1;
+  *val_malloc1 = 3;
   int *val_malloc2 = malloc (sizeof (int));
   *val_malloc2 = 4;
 
