@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 void
 print_error (const char *format, ...)
@@ -217,35 +218,8 @@ void
 parse_logs (int a)
 {
 
-/* /^[^\"]+[^\s]+\s([^\s]+)[^\"]+\"\s[\d]+\s([\d]+)\s\"([^\"]+).*$/gm */
-/* 127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "http://www.example.com/start.html" "Mozilla/4.08 [en] (Win98; I ;Nav)" */
-
   printf ("Номер потока %d\n", a);
 
-  struct stat statbuf;
-  int fd;
-
-  char *path = "test_log";
-  if ((fd = open (path, O_RDONLY)) < 0)
-    print_error ("невозможно открыть %s для чтения",
-		 path);
-
-  errno = 0;
-
-  if (fstat (fd, &statbuf) < 0)
-    print_error
-      ("Ошибка вызова функции fstat:%s у файла %s\n",
-       strerror (errno), path);
-
-
-  void *src;
-
-  if ((src =
-       mmap (0, statbuf.st_size, PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED)
-    print_error ("%s\n",
-		 "Ошибка вызова функции mmap для входного файла");
-
-  int offset = 0;
   char pattern[] =
     "^[^\"]+[^\\s]+\\s([^\\s]+)[^\"]+\"\\s[\\d]+\\s([\\d]+)\\s\"([^\"]+).*$";
 
@@ -258,37 +232,78 @@ parse_logs (int a)
   int erroffset;
   re = pcre_compile ((char *) pattern, options, &error, &erroffset, NULL);
   if (!re)
+    print_error ("Failed pcre_compile in thread %d\n", a);
+
+/* /^[^\"]+[^\s]+\s([^\s]+)[^\"]+\"\s[\d]+\s([\d]+)\s\"([^\"]+).*$/gm */
+/* 127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "http://www.example.com/start.html" "Mozilla/4.08 [en] (Win98; I ;Nav)" */
+
+  struct stat statbuf;
+  int fd, i, j;
+  char url[1024] = { 0 };
+  char referer[1024] = { 0 };
+  char bytes_string[30] = { 0 };
+  int bytes = 0;
+
+  char *path = "log/test_log";
+  if ((fd = open (path, O_RDONLY)) < 0)
+    print_error ("невозможно открыть %s для чтения",
+		 path);
+
+  errno = 0;
+
+  if (fstat (fd, &statbuf) < 0)
+    print_error
+      ("Ошибка вызова функции fstat:%s у файла %s\n",
+       strerror (errno), path);
+
+  void *src;
+
+  if ((src =
+       mmap (0, statbuf.st_size, PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED)
+    print_error ("%s\n",
+		 "Ошибка вызова функции mmap для входного файла");
+
+
+  int ovector[30];
+
+  char *str = NULL;
+  int offset = 0, length = 0;
+
+  for (str = src; offset < statbuf.st_size;
+       str += length, offset += length, length = 0)
     {
-      print_error ("%s", "Failed\n");
-    }
-  else
-    {
-      int count = 0;
-      int ovector[30];
-      count =
-	pcre_exec (re, NULL, (char *) src, statbuf.st_size, 0, 0, ovector,
-		   30);
-      if (!count)
-	{
-	  printf ("%s", "No match\n");
-	}
-      else
-	{
-	  for (int c = 0; c < 2 * count; c += 2)
-	    {
-	      if (ovector[c] < 0)
-		{
-		  printf ("%s", "<unset>\n");
-		}
-	      else
-		{
-		  printf ("%d/%d\n", ovector[c], ovector[c + 1]);
-		}
-	    }
-	}
+
+      while (offset + length < statbuf.st_size && *(str + length) != '\n')
+	length++;
+
+      int count = pcre_exec (re, NULL, str, length, 0, 0, ovector, 30);
+
+      if (count == -1)
+	continue;
+
+      for (i = 0, j = ovector[2]; j < ovector[3]; i++, j++)
+	url[i] = *(str + j);
+      url[i] = '\0';
+
+      for (i = 0, j = ovector[4]; j < ovector[5]; i++, j++)
+	bytes_string[i] = *(str + j);
+      bytes_string[i] = '\0';
+
+      for (i = 0, j = ovector[6]; j < ovector[7]; i++, j++)
+	referer[i] = *(str + j);
+      referer[i] = '\0';
+
+      bytes = atoi (bytes_string);
+
     }
 
   munmap (src, statbuf.st_size);
+
+  if (close (fd) < 0)
+    print_error
+      ("Ошибка вызова close(чтение) для файла %s\n",
+       path);
+
 
 }
 
