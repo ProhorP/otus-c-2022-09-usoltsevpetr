@@ -118,8 +118,8 @@ print_top_by_value (GHashTable * hash_table, int count)
 
   for (int i = 0; i < key_value_struct_buf->count && count; i++, count--)
     printf ("%s = %llu\n", (char *) key_value_struct_buf->array[i].key,
-	    *((unsigned long long int *) key_value_struct_buf->
-	      array[i].value));
+	    *((unsigned long long int *) key_value_struct_buf->array[i].
+	      value));
 
   /*удаляем массив */
   free (key_value_struct_buf);
@@ -324,7 +324,7 @@ parse_logs (int a)
       val = g_hash_table_lookup (thread_data_array[a].ref_counter, referer);
 
       if (val)
-	(*((unsigned long long int *) val))++;
+	*((unsigned long long int *) val)++;
       else
 	{
 
