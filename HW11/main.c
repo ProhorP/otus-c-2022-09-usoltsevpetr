@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <assert.h>
 
 #define PWD_LENGTH 200
 #define SIZE_STR_BUF 8192
@@ -62,7 +63,7 @@ thread_data *thread_data_array = NULL;
 
 typedef struct key_value
 {
-  char *key;
+  gpointer key;
   gpointer value;
 } key_value;
 
@@ -77,7 +78,7 @@ void
 hash_to_array (gpointer key, gpointer value, gpointer user_data)
 {
 
-  as_hs (array[as_hs (count)]).key = (char *) key;
+  as_hs (array[as_hs (count)]).key = key;
   as_hs (array[as_hs (count)]).value = value;
   as_hs (count)++;
 
@@ -127,7 +128,6 @@ print_top_by_value (GHashTable * hash_table, int count)
   key_value_struct *key_value_struct_buf =
     malloc_key_value_struct (hash_table);
 
-
   /*заполняем */
   g_hash_table_foreach (hash_table, hash_to_array, key_value_struct_buf);
 
@@ -170,7 +170,7 @@ new_thread_data (int count_threads)
 
   /* выделяем +1 структуру для объединения */
   thread_data *thread_data_array =
-    (thread_data *) malloc ((count_threads+1) * sizeof (thread_data));
+    (thread_data *) malloc ((count_threads + 1) * sizeof (thread_data));
 
   /*инициализация данных для потоков */
   int i;
@@ -287,6 +287,7 @@ parse_logs (void *arg)
   //setlocale (LC_CTYPE, (const char *) "ru.");
   //tables = pcre_maketables();
   re = pcre_compile (pattern, options, &error, &erroffset, NULL);
+
   if (!re)
     return thread_print_error ("Failed pcre_compile in thread %d\n", num_t);
 
@@ -333,22 +334,19 @@ parse_logs (void *arg)
 	    url[i] = *(str + j);
 	  url[i] = '\0';
 
-	  if (i > SIZE_STR_BUF)
-	    printf ("%s\n", "выход за предел url");
+	  assert (i <= SIZE_STR_BUF);
 
 	  for (i = 0, j = ovector[4]; j < ovector[5]; i++, j++)
 	    bytes_string[i] = *(str + j);
 	  bytes_string[i] = '\0';
 
-	  if (i > SIZE_BYTES_BUF)
-	    printf ("%s\n", "выход за предел bytes_string");
+	  assert (i <= SIZE_BYTES_BUF);
 
 	  for (i = 0, j = ovector[6]; j < ovector[7]; i++, j++)
 	    referer[i] = *(str + j);
 	  referer[i] = '\0';
 
-	  if (i > SIZE_STR_BUF)
-	    printf ("%s\n", "выход за предел referer");
+	  assert (i <= SIZE_STR_BUF);
 
 	  bytes = atoi (bytes_string);
 
@@ -459,7 +457,6 @@ main (int argc, char **argv)
       if (err != 0)
 	print_error ("невозможно создать поток %d\n",
 		     i);
-
     }
 
   void *tret;
@@ -479,6 +476,8 @@ main (int argc, char **argv)
       ("ошибка вызова функции chdir для каталога %s\n",
        save_pwd);
 
+  /* объединяем все данные в последнуюю структуру
+     выводим данные и очищаем все */
   union_hash (thread_data_array, count_threads);
 
   printf
