@@ -137,8 +137,8 @@ print_top_by_value (GHashTable * hash_table, int count)
 
   for (int i = 0; i < key_value_struct_buf->count && count; i++, count--)
     printf ("%s = %llu\n", (char *) key_value_struct_buf->array[i].key,
-	    *((unsigned long long int *) key_value_struct_buf->array[i].
-	      value));
+	    *((unsigned long long int *) key_value_struct_buf->
+	      array[i].value));
 
   /*удаляем массив */
   free (key_value_struct_buf);
@@ -229,15 +229,13 @@ free_thread_data (thread_data * thread_data_array, int count_threads)
   entry_link temp, next;
   for (int i = 0; i <= count_threads; i++)
     {
-      if (i < count_threads)
+      for (temp = thread_data_array[i].file_path, next = NULL;
+	   temp != NULL; temp = next)
 	{
-	  for (temp = thread_data_array[i].file_path, next = NULL;
-	       temp != NULL; temp = next)
-	    {
-	      next = temp->next;
-	      free (temp);
-	    }
+	  next = temp->next;
+	  free (temp);
 	}
+
       g_hash_table_destroy (thread_data_array[i].url_counter);
       g_hash_table_destroy (thread_data_array[i].ref_counter);
     }
