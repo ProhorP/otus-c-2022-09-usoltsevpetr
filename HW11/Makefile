@@ -7,7 +7,7 @@ PCRE_LIB=`pcre-config --libs`
 all: threads
 
 threads: main.o
-	$(CC) main.o $(GLIB_LIB) $(PCRE_LIB) -o threads
+	$(CC) main.o $(GLIB_LIB) $(PCRE_LIB) -o threads -pthread
 
 main.o: main.c
 	$(CC) $(GLIB_CONF) $(CFLAGS) main.c 
