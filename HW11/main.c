@@ -52,7 +52,7 @@ typedef struct entry
 typedef struct thread_data
 {
   entry_link file_path;
-  int byte_count;
+  size_t byte_count;
   pthread_t tid;
   int num;
   GHashTable *url_counter;
@@ -91,13 +91,13 @@ union_hash_func (gpointer key, gpointer value, gpointer user_data)
   gpointer val = g_hash_table_lookup ((GHashTable *) user_data, key);
 
   if (val)
-    *((unsigned long long int *) val) += *((unsigned long long int *) value);
+    *((size_t *) val) += *((size_t *) value);
   else
     g_hash_table_insert ((GHashTable *) user_data, key, value);
 
 }
 
-#define get_val(A) *((unsigned long long int *)((key_value *) A)->value)
+#define get_val(A) *((size_t *)((key_value *) A)->value)
 int
 compare (const void *i, const void *j)
 {
@@ -136,9 +136,8 @@ print_top_by_value (GHashTable * hash_table, int count)
 	 sizeof (key_value), compare);
 
   for (int i = 0; i < key_value_struct_buf->count && count; i++, count--)
-    printf ("%s = %llu\n", (char *) key_value_struct_buf->array[i].key,
-	    *((unsigned long long int *) key_value_struct_buf->
-	      array[i].value));
+    printf ("%s = %zu\n", (char *) key_value_struct_buf->array[i].key,
+	    *((size_t *) key_value_struct_buf->array[i].value));
 
   /*удаляем массив */
   free (key_value_struct_buf);
@@ -267,9 +266,9 @@ parse_logs (void *arg)
   char url[SIZE_STR_BUF] = { 0 };
   char referer[SIZE_STR_BUF] = { 0 };
   char bytes_string[SIZE_BYTES_BUF] = { 0 };
-  unsigned long int bytes = 0;
+  size_t bytes = 0;
   gpointer val = NULL;
-  unsigned long long int *malloc_bytes = NULL;
+  size_t *malloc_bytes = NULL;
   char *str, *end_str, *path;
   void *src;
   struct stat statbuf;
@@ -346,7 +345,7 @@ parse_logs (void *arg)
 
 	  assert (i <= SIZE_STR_BUF);
 
-	  bytes = atoi (bytes_string);
+	  bytes = atol (bytes_string);
 
 	  /* byte_count */
 	  thread_data_array[num_t].byte_count += bytes;
@@ -356,10 +355,10 @@ parse_logs (void *arg)
 	    g_hash_table_lookup (thread_data_array[num_t].url_counter, url);
 
 	  if (val)
-	    *((unsigned long long int *) val) += bytes;
+	    *((size_t *) val) += bytes;
 	  else
 	    {
-	      malloc_bytes = malloc (sizeof (unsigned long long int));
+	      malloc_bytes = malloc (sizeof (size_t));
 	      *malloc_bytes = bytes;
 
 	      g_hash_table_insert (thread_data_array[num_t].url_counter,
@@ -372,10 +371,10 @@ parse_logs (void *arg)
 				 referer);
 
 	  if (val)
-	    (*((unsigned long long int *) val))++;
+	    (*((size_t *) val))++;
 	  else
 	    {
-	      malloc_bytes = malloc (sizeof (unsigned long long int));
+	      malloc_bytes = malloc (sizeof (size_t));
 	      *malloc_bytes = 1;
 
 	      g_hash_table_insert (thread_data_array[num_t].ref_counter,
@@ -479,7 +478,7 @@ main (int argc, char **argv)
   union_hash (thread_data_array, count_threads);
 
   printf
-    ("общее количество отданных байт = %d\n",
+    ("общее количество отданных байт = %zu\n",
      thread_data_array[count_threads].byte_count);
   printf
     ("10 самых “тяжёлых” по суммарному трафику URL’ов:\n");

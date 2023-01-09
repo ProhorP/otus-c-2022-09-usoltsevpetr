@@ -14,10 +14,9 @@
 #define BUF_SIZE 4096
 #define HOSTNAME "telehack.com"
 #define SERVICE "telnet"
-#define QUERY_SIZE 1024
 
 static char buffer[BUF_SIZE] = { 0 };
-char query_string[QUERY_SIZE] = { 0 };
+char query_string[1024] = { 0 };
 
 int
 main (int argc, char **argv)
@@ -29,13 +28,12 @@ main (int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-  snprintf (query_string, QUERY_SIZE, "figlet /%s %s\r\n", argv[1], argv[2]);
+  snprintf (query_string, sizeof(query_string), "figlet /%s %s\r\n", argv[1], argv[2]);
 
   struct addrinfo *result, *rp;
-  struct addrinfo hints;
+  struct addrinfo hints = {0};
   int sfd;
 
-  memset (&hints, 0, sizeof (struct addrinfo));
   hints.ai_family = AF_INET;	/* Allow IPv4 or IPv6 */
   hints.ai_socktype = SOCK_STREAM;	/* Datagram socket */
   hints.ai_flags = 0;		/* For wildcard IP address */
