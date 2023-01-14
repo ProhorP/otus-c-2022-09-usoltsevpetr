@@ -88,6 +88,7 @@ do_read (struct async_data *ptr)
       int offset = strlen (root);
       memcpy (ptr->workspace, root, offset);
       size_t i = 0;
+
       while (i + offset < sizeof (ptr->workspace) - 1)
 	{
 	  if (isspace (buffer[i + 4]))
