@@ -1,1 +1,3 @@
 telnet localhost 12345
+./http_server . 127.0.0.1:12345
+curl -vvv http://127.0.0.1:12345/hint
