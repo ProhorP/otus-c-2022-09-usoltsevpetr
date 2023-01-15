@@ -91,7 +91,6 @@ do_read (struct async_data *ptr)
 	 sizeof (ptr->workspace) - 1) ? (offset) : (sizeof (ptr->workspace) -
 						    1);
       memcpy (ptr->workspace, root, offset);
-
       memcpy (ptr->workspace + offset, strtok (buffer + 4, " "),
 	      sizeof (ptr->workspace) - offset - 1);
     }
