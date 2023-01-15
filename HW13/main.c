@@ -13,8 +13,6 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
-#define INSURANCE 100
-
 static char buffer[2048] = { 0 };
 char root[1024] = { 0 };
 char s_ip[16] = { 0 };
@@ -31,7 +29,8 @@ struct async_data
 char *template_greeting = "HTTP/1.1 %d %s\r\n"
   "Server: %s\r\n"
   "Content-Length: %d\r\n"
-  "Content-Type: text; charset=UTF-8\r\n\r\n" "%s\r\n";
+  "Connection: close\r\n"
+  "Content-Type: application/octet-stream; charset=UTF-8\r\n\r\n%s";
 
 char *
 status (int client_status)
@@ -85,18 +84,16 @@ do_read (struct async_data *ptr)
   if (!memcmp (buffer, "GET", 3))
     {
       ptr->client_status = 200;
-      int offset = strlen (root);
+      size_t offset = strlen (root);
+      /*страховка на выход за пределы массива */
+      offset =
+	(offset <
+	 sizeof (ptr->workspace) - 1) ? (offset) : (sizeof (ptr->workspace) -
+						    1);
       memcpy (ptr->workspace, root, offset);
-      size_t i = 0;
 
-      while (i + offset < sizeof (ptr->workspace) - 1)
-	{
-	  if (isspace (buffer[i + 4]))
-	    break;
-	  ptr->workspace[offset + i] = buffer[i + 4];
-	  i++;
-	}
-      ptr->workspace[offset + i] = '\0';
+      memcpy (ptr->workspace + offset, strtok (buffer + 4, " "),
+	      sizeof (ptr->workspace) - offset - 1);
     }
   else
     {
@@ -105,6 +102,17 @@ do_read (struct async_data *ptr)
 		"Можно отправлять только GET запросы");
     }
 
+}
+
+size_t
+digit_count (size_t number)
+{
+  size_t result = 1;
+
+  while (number /= 10)
+    result++;
+
+  return result;
 }
 
 void
@@ -151,16 +159,34 @@ do_write (struct async_data *ptr)
 	}
     }
 
-  size_t greeting_size = (ptr->client_status ==
-			  200 ? (size_t) statbuf.
-			  st_size : strlen (ptr->error_request)) +
-    strlen (template_greeting) + INSURANCE;
+  char *greeting = NULL;
 
-  char *greeting = (char *) malloc (greeting_size);
+  size_t greeting_size =
+    strlen (template_greeting) + digit_count (ptr->client_status) +
+    strlen (status (ptr->client_status)) + strlen (s_ip);
 
-  snprintf (greeting, greeting_size, template_greeting, ptr->client_status,
-	    status (ptr->client_status), s_ip, statbuf.st_size,
-	    ptr->client_status == 200 ? src : ptr->error_request);
+  if (ptr->client_status == 200)
+    {
+      greeting_size += digit_count (statbuf.st_size) + statbuf.st_size;
+
+      greeting = (char *) malloc (greeting_size);
+      snprintf (greeting, greeting_size, template_greeting,
+		ptr->client_status, status (ptr->client_status), s_ip,
+		statbuf.st_size, src);
+
+    }
+  else
+    {
+      size_t err_len = strlen (ptr->error_request);
+
+      greeting_size += digit_count (err_len) + err_len;
+
+      greeting = (char *) malloc (greeting_size);
+      snprintf (greeting, greeting_size, template_greeting,
+		ptr->client_status, status (ptr->client_status), s_ip,
+		err_len, ptr->error_request);
+
+    }
 
   int rc = send (ptr->fd, greeting, strlen (greeting), 0);
 
@@ -188,6 +214,7 @@ static struct epoll_event events[MAX_EPOLL_EVENTS];
 int
 main (int argc, char **argv)
 {
+
   if (argc < 3)
     {
       printf ("Usage: %s <workspace> <ip>:<port>\n", argv[0]);
@@ -218,21 +245,9 @@ main (int argc, char **argv)
 	}
     }
 
-  strcpy (root, argv[1]);
-
-  char *temp;
-  int i = 0, j = 0;
-  for (i = 0, j = 0, temp = s_ip; argv[2][i] != '\0'; i++)
-    {
-      if (argv[2][i] == ':')
-	{
-	  temp = s_port;
-	  j = 0;
-	  continue;
-	}
-      temp[j] = argv[2][i];
-      j++;
-    }
+  memcpy (root, argv[1], sizeof (root));
+  memcpy (s_ip, strtok (argv[2], ":"), sizeof (s_ip));
+  memcpy (s_port, strtok (NULL, ":"), sizeof (s_port));
 
   signal (SIGPIPE, SIG_IGN);
   int efd = epoll_create (MAX_EPOLL_EVENTS);
@@ -260,13 +275,12 @@ main (int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-  struct async_data *listen_ptr =
-    (struct async_data *) malloc (sizeof (struct async_data));
-  listen_ptr->fd = listenfd;
+  struct async_data listen_data = { 0 };
+  listen_data.fd = listenfd;
 
   struct epoll_event listenev;
   listenev.events = EPOLLIN | EPOLLET;
-  listenev.data.ptr = listen_ptr;
+  listenev.data.ptr = &listen_data;
   if (epoll_ctl (efd, EPOLL_CTL_ADD, listenfd, &listenev) < 0)
     {
       perror ("epoll_ctl");
@@ -282,47 +296,40 @@ main (int argc, char **argv)
 	{
 	  if (((struct async_data *) events[i].data.ptr)->fd == listenfd)
 	    {
-	      int connfd = accept (listenfd, NULL, NULL);
-	      if (connfd < 0)
+	      int connfd = 0;
+	      while ((connfd = accept (listenfd, NULL, NULL)) > 0)
 		{
-		  perror ("accept");
-		  continue;
-		}
+		  if (events_count == MAX_EPOLL_EVENTS - 1)
+		    {
+		      printf ("Event array is full\n");
+		      close (connfd);
+		      break;
+		    }
+		  struct async_data *conn_ptr =
+		    (struct async_data *) calloc (1,
+						  sizeof (struct async_data));
+		  conn_ptr->fd = connfd;
+		  setnonblocking (connfd);
+		  connev.data.ptr = conn_ptr;
+		  connev.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLRDHUP;
+		  if (epoll_ctl (efd, EPOLL_CTL_ADD, connfd, &connev) < 0)
+		    {
+		      perror ("epoll_ctl");
+		      free (conn_ptr);
+		      close (connfd);
+		      break;
+		    }
 
-	      if (events_count == MAX_EPOLL_EVENTS - 1)
-		{
-		  printf ("Event array is full\n");
-		  close (connfd);
-		  continue;
+		  events_count++;
 		}
-	      struct async_data *conn_ptr =
-		(struct async_data *) malloc (sizeof (struct async_data));
-	      conn_ptr->fd = connfd;
-	      conn_ptr->client_status = 0;
-
-	      setnonblocking (connfd);
-	      connev.data.ptr = conn_ptr;
-	      connev.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLRDHUP;
-	      if (epoll_ctl (efd, EPOLL_CTL_ADD, connfd, &connev) < 0)
-		{
-		  perror ("epoll_ctl");
-		  free (conn_ptr);
-		  close (connfd);
-		  continue;
-		}
-
-	      events_count++;
 	    }
 	  else
 	    {
-	      /*Это костыльное упорядочивание, лучше не смог придумать */
-
 	      if (!(events[i].events & EPOLLIN)
 		  && (events[i].events & EPOLLOUT)
-		  && ((struct async_data *) events[i].data.ptr)->
-		  client_status == 0)
+		  && ((struct async_data *) events[i].data.
+		      ptr)->client_status == 0)
 		continue;
-
 	      struct async_data *ptr = events[i].data.ptr;
 	      if (events[i].events & EPOLLIN)
 		do_read (ptr);
