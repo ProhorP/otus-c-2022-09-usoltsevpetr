@@ -189,7 +189,7 @@ do_write (struct async_data *ptr)
 
   int rc = send (ptr->fd, greeting, strlen (greeting), 0);
 
-  if (src != MAP_FAILED)
+  if (src && src != MAP_FAILED)
     munmap (src, statbuf.st_size);
 
   free (greeting);
