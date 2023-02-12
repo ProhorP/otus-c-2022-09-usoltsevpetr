@@ -1,14 +1,24 @@
+#BIN = demo
+
+CFLAGS += -Wall -Wextra -pedantic -Wno-unused-function -g
+#-O2
 CC=gcc
-CFLAGS=-c -Wall -Wextra -Wpedantic -std=c11 -g
-LIB_ALLEGRO=-lallegro -lallegro_ttf -lallegro_font -lallegro_image
+#SRC = main.c
+#OBJ = $(SRC:.c=.o)
+NUKLEAR=-I/home/user/Nuklear
 
-all: sapper
+LIBS=-lallegro -lallegro_main -lallegro_image -lallegro_font \
+	-lallegro_ttf -lallegro_primitives -lm
 
-sapper: main.o
-	$(CC) main.o -o sapper ${LIB_ALLEGRO}
 
-main.o: main.c
-	$(CC) $(CFLAGS) main.c
+#$(BIN):
+#	@mkdir -p bin
+#	rm -f bin/$(BIN) $(OBJS)
+#	$(CC) ${NUKLEAR} $(SRC) $(CFLAGS) -o bin/$(BIN) $(LIBS)
+
+all: 
+	$(CC) ${NUKLEAR} main.c $(CFLAGS) -o sapper $(LIBS)
 
 clean:
-	rm -rf *.o sapper
+	rm sapper
+
